@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import article %}
+{% from '_macros.html' import card %}
 {% block content %}
 {% if archive_title %}
 <header class="archive-header"><h1 class="archive-title">{{ archive_title }}</h1>{% if archive_description %}<div class="taxonomy-description">{{ archive_description }}</div>{% endif %}</header>
 {% endif %}
-{% for p in posts %}{{ article(p, summary=summary) }}{% endfor %}
+<div class="post-cards">
+{% for p in posts %}{{ card(p) }}{% endfor %}
+</div>
 {% if pagination %}
 <nav class="navigation paging-navigation" aria-label="ניווט בין הפוסטים">
 <h1 class="screen-reader-text">ניווט בין הפוסטים</h1>

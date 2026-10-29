@@ -5,7 +5,7 @@ url: https://multiversesite.com          # final public address
 language: he
 header_image: /wp-content/uploads/2019/03/multiverse-site-header.jpg
 facebook: https://www.facebook.com/multiversesite
-per_page: 10
+per_page: 20
 
 # While images are still being copied over, any image that is missing from
 # static/ is loaded from this address instead. Set to '' once all media is in.
@@ -13,6 +13,8 @@ media_fallback: ''
 
 # Main menu (category slugs from data/categories.json, or pages)
 menu:
+  - page: /
+    title: דף הבית
   - cat: קולנוע
     children:
       - cat: חדשות-קולנוע

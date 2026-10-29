@@ -27,7 +27,7 @@ OUT = os.path.join(ROOT, '_site')
 CFG = yaml.safe_load(open(os.path.join(ROOT, 'site.yml'), encoding='utf-8'))
 BASE = os.environ.get('BASE_PATH', '').rstrip('/')
 SITE_URL = (os.environ.get('SITE_URL') or (CFG['url'].rstrip('/') + BASE)).rstrip('/')
-PER_PAGE = int(CFG.get('per_page', 10))
+PER_PAGE = int(CFG.get('per_page', 20))
 FALLBACK = CFG.get('media_fallback') or ''
 HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר',
               'נובמבר', 'דצמבר']
@@ -107,8 +107,39 @@ def summary_text(p):
     if p.get('_summary') is None:
         text = p.get('excerpt') or strip_tags(p['teaser'] or p['rest'])
         words = text.split()
-        p['_summary'] = ' '.join(words[:55]) + (' [&hellip;]' if len(words) > 55 else '')
+        p['_summary'] = ' '.join(words[:40]) + ('&hellip;' if len(words) > 40 else '')
     return p['_summary']
+
+
+THUMBS_DIR = os.path.join(ROOT, 'static', 'thumbs')
+THUMB_SIZE = (480, 266)
+_thumb_cache = {}
+
+
+def thumb(p):
+    """Small cropped copy of a post's image for list pages (made once, kept in static/thumbs)."""
+    if not p.get('image'):
+        return None
+    pid = p['id']
+    if pid in _thumb_cache:
+        return _thumb_cache[pid]
+    name = f'{pid}.webp'
+    dst = os.path.join(THUMBS_DIR, name)
+    if not os.path.exists(dst):
+        from urllib.parse import unquote
+        rel = unquote(p['image'][len('/wp-content/uploads/'):])
+        src = os.path.join(UPLOADS_DIR, MEDIA_MAP.get(rel, rel))
+        if os.path.exists(src):
+            try:
+                from PIL import Image, ImageOps
+                os.makedirs(THUMBS_DIR, exist_ok=True)
+                with Image.open(src) as im:
+                    ImageOps.fit(im.convert('RGB'), THUMB_SIZE, Image.LANCZOS).save(dst, 'WEBP', quality=72, method=4)
+            except Exception as e:  # noqa: BLE001
+                print('thumb failed', src, e, file=sys.stderr)
+    url = f'{BASE}/thumbs/{name}' if os.path.exists(dst) else media(p['image'])
+    _thumb_cache[pid] = url
+    return url
 
 
 def cat_chain(slug):
@@ -194,7 +225,7 @@ def comments_for(pid):
 # ------------------------------------------------------------------ render
 env = Environment(loader=FileSystemLoader(os.path.join(ROOT, 'templates')),
                   autoescape=select_autoescape(['html', 'xml']), trim_blocks=True, lstrip_blocks=True)
-env.globals.update(u=u, media=media, summary_text=summary_text, heb_date=heb_date, cat_url=cat_url, tag_url=tag_url,
+env.globals.update(u=u, media=media, summary_text=summary_text, thumb=thumb, heb_date=heb_date, cat_url=cat_url, tag_url=tag_url,
                    author_url=author_url, CATS=CATS, TAGS=TAGS, AUTHORS=AUTHORS, cfg=CFG, BASE=BASE,
                    SITE_URL=SITE_URL)
 env.filters['body'] = lambda h: Markup(fix_body(h))
@@ -254,7 +285,7 @@ def render_list(base_url, posts, title=None, kind='home', description=None, body
             page_title = (page_title + ' | ' if page_title else '') + f'עמוד {n}'
         write(url, tpl.render(posts=chunk, archive_title=title, archive_description=description,
                               page_title=page_title, pagination=paginate_links(n, total, base_url) if total > 1 else [],
-                              embeds=set() if summary else flags, body_class=body_class, canonical=url, page_num=n,
+                              embeds=set(), body_class=body_class, canonical=url, page_num=n,
                               is_list=True,
                               summary=summary))
 

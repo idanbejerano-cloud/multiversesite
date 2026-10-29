@@ -38,3 +38,18 @@
 {% macro search_form() %}
 <form role="search" method="get" class="search-form" action="{{ u('/search/') }}"><label><span class="screen-reader-text">חיפוש:</span><input type="search" class="search-field" placeholder="חיפוש &hellip;" name="q"></label><input type="submit" class="search-submit" value="חיפוש"></form>
 {% endmacro %}
+
+{% macro card(p) %}
+<article id="post-{{ p.id }}" class="post-card">
+<a class="post-card-link" href="{{ u(p.url) }}">
+{% if p.image %}<span class="post-card-image"><img src="{{ thumb(p) }}" width="480" height="266" alt="" loading="lazy" decoding="async"></span>{% endif %}
+<span class="post-card-body">
+{% if p.categories %}<span class="post-card-cats">{% for c in p.categories %}{{ CATS[c].name if c in CATS else c }}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+<h2 class="post-card-title">{{ p.title }}</h2>
+<span class="post-card-meta"><time datetime="{{ p.dt.isoformat() }}">{{ heb_date(p.dt) }}</time> &middot; {{ AUTHORS.get(p.author, p.author) }}{% if p.comments %} &middot; {{ 'תגובה אחת' if p.comments == 1 else p.comments ~ ' תגובות' }}{% endif %}</span>
+<span class="post-card-excerpt">{{ summary_text(p)|safe }}</span>
+<span class="post-card-more">להמשיך לקרוא &larr;</span>
+</span>
+</a>
+</article>
+{% endmacro %}
