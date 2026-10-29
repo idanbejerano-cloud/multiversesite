@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import article %}
+{% block content %}
+{% if archive_title %}
+<header class="archive-header"><h1 class="archive-title">{{ archive_title }}</h1>{% if archive_description %}<div class="taxonomy-description">{{ archive_description }}</div>{% endif %}</header>
+{% endif %}
+{% for p in posts %}{{ article(p, summary=summary) }}{% endfor %}
+{% if pagination %}
+<nav class="navigation paging-navigation" aria-label="ניווט בין הפוסטים">
+<h1 class="screen-reader-text">ניווט בין הפוסטים</h1>
+<div class="pagination loop-pagination">{% for kind, url, label in pagination %}{% if kind == 'current' %}<span aria-current="page" class="page-numbers current">{{ label }}</span>{% elif kind == 'dots' %}<span class="page-numbers dots">&hellip;</span>{% else %}<a class="{{ kind }} page-numbers" href="{{ u(url) }}">{{ label }}</a>{% endif %}{% endfor %}</div>
+</nav>
+{% endif %}
+{% endblock %}

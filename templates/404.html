@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import search_form %}
+{% block content %}
+<header class="page-header"><h1 class="page-title">לא נמצא</h1></header>
+<div class="page-content">
+<p>נראה שהדף שחיפשת לא נמצא כאן. אולי כדאי לנסות חיפוש?</p>
+{{ search_form() }}
+</div>
+{% endblock %}

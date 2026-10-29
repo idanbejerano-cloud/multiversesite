@@ -1,0 +1,34 @@
+[
+ {
+  "id": 1000,
+  "parent": 0,
+  "author": "Niko Haim",
+  "url": "https://www.facebook.com/app_scoped_user_id/480858615438457/",
+  "date": "2016-06-05 10:34:58",
+  "html": "<p>תעשה ביקורת גם על סופרמן, החץ הירוק ו-Green Lanterns</p>\n"
+ },
+ {
+  "id": 1001,
+  "parent": 1000,
+  "author": "idangueta",
+  "url": "",
+  "date": "2016-06-05 11:07:51",
+  "html": "<p>בקרוב נפרסם עוד, יהיה כיף :)</p>\n"
+ },
+ {
+  "id": 1007,
+  "parent": 0,
+  "author": "אוהד קומיקס",
+  "url": "",
+  "date": "2016-06-07 12:39:58",
+  "html": "<p>כמה עמודים הקומיקס ?</p>\n"
+ },
+ {
+  "id": 1008,
+  "parent": 1007,
+  "author": "Idan Bejerano",
+  "url": "http://idanb.wordpress.com",
+  "date": "2016-06-07 12:43:37",
+  "html": "<p>32</p>\n"
+ }
+]

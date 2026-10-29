@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he-IL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page_title %}{{ page_title }} | {{ cfg.title }}{% else %}{{ cfg.title }} | {{ cfg.description }}{% endif %}</title>
+<meta name="description" content="{{ meta_description or cfg.description }}">
+{% if canonical %}<link rel="canonical" href="{{ SITE_URL }}{{ canonical }}">{% endif %}
+<meta property="og:site_name" content="{{ cfg.title }}">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="{{ page_title or cfg.title }}">
+<meta property="og:description" content="{{ meta_description or cfg.description }}">
+{% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+{% if canonical %}<meta property="og:url" content="{{ SITE_URL }}{{ canonical }}">{% endif %}
+<meta property="og:type" content="{{ 'article' if post is defined and post else 'website' }}">
+<link rel="alternate" type="application/rss+xml" title="{{ cfg.title }} &raquo; פיד" href="{{ u('/feed/') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400&amp;display=swap">
+<link rel="stylesheet" href="{{ u('/assets/style.css') }}?v=3">
+<link rel="icon" href="{{ u('/assets/icon.png') }}">
+</head>
+<body class="rtl {{ body_class }} header-image full-width" data-base="{{ BASE }}">
+<div id="page" class="hfeed site">
+<div id="site-header"><a href="{{ u('/') }}" rel="home"><img src="{{ media(cfg.header_image) }}" width="1260" height="240" alt="{{ cfg.title }}"></a></div>
+<header id="masthead" class="site-header">
+<div class="header-main">
+<h1 class="site-title"><a href="{{ u('/') }}" rel="home">{{ cfg.title }}</a></h1>
+<div class="search-toggle"><a href="#search-container" aria-expanded="false" aria-controls="search-container"><span class="screen-reader-text">חיפוש</span></a></div>
+<nav id="primary-navigation" class="site-navigation primary-navigation" aria-label="תפריט ראשי">
+<button class="menu-toggle" aria-expanded="false">תפריט ראשי</button>
+<a class="screen-reader-text skip-link" href="#content">לדלג לתוכן</a>
+<ul id="primary-menu" class="nav-menu">
+{% for m in menu %}
+<li class="menu-item{% if m.children %} menu-item-has-children{% endif %}"><a href="{{ u(m.url) }}">{{ m.title }}</a>
+{% if m.children %}<ul class="sub-menu">{% for c in m.children %}<li class="menu-item"><a href="{{ u(c.url) }}">{{ c.title }}</a></li>{% endfor %}</ul>{% endif %}
+</li>
+{% endfor %}
+</ul>
+</nav>
+</div>
+<div id="search-container" class="search-box-wrapper hide">
+<div class="search-box">
+<form role="search" method="get" class="search-form" action="{{ u('/search/') }}"><label><span class="screen-reader-text">חיפוש:</span><input type="search" class="search-field" placeholder="חיפוש &hellip;" name="q"></label><input type="submit" class="search-submit" value="חיפוש"></form>
+</div>
+</div>
+</header>
+<div id="main" class="site-main">
+<div id="main-content" class="main-content">
+<div id="primary" class="content-area">
+<div id="content" class="site-content" role="main">
+{% block content %}{% endblock %}
+</div>
+</div>
+</div>
+<div id="secondary">
+<h2 class="site-description">{{ cfg.description }}</h2>
+{{ sidebar }}
+</div>
+</div>
+<footer id="colophon" class="site-footer">
+<div class="site-info"><a href="{{ u('/') }}">{{ cfg.title }}</a> &middot; {{ cfg.description }}</div>
+</footer>
+</div>
+<script src="{{ u('/assets/site.js') }}?v=3" defer></script>
+{% if 'twitter' in embeds %}<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>{% endif %}
+{% if 'instagram' in embeds %}<script async src="https://www.instagram.com/embed.js"></script>{% endif %}
+{% if 'facebook' in embeds %}<div id="fb-root"></div><script async defer crossorigin="anonymous" src="https://connect.facebook.net/he_IL/sdk.js#xfbml=1&amp;version=v19.0"></script>{% endif %}
+</body>
+</html>

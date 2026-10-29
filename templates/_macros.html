@@ -1,0 +1,40 @@
+{% macro article(p, single=False, is_page=False, summary=False) %}
+<article id="post-{{ p.id }}" class="{{ 'page' if is_page else 'post' }} hentry{% if p.image %} has-post-thumbnail{% endif %}">
+{% if p.image %}
+{% if single %}
+<div class="post-thumbnail"><img width="1038" height="576" src="{{ media(p.image) }}" alt="" fetchpriority="high"></div>
+{% else %}
+<a class="post-thumbnail" href="{{ u(p.url) }}" aria-hidden="true" tabindex="-1"><img width="1038" height="576" src="{{ media(p.image) }}" alt="" loading="lazy" decoding="async"></a>
+{% endif %}
+{% endif %}
+<header class="entry-header">
+{% if p.categories and not is_page %}<div class="entry-meta"><span class="cat-links">{% for c in p.categories %}<a href="{{ u(cat_url(c)) }}" rel="category tag">{{ CATS[c].name if c in CATS else c }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</span></div>{% endif %}
+{% if single %}<h1 class="entry-title">{{ p.title }}</h1>{% else %}<h1 class="entry-title"><a href="{{ u(p.url) }}" rel="bookmark">{{ p.title }}</a></h1>{% endif %}
+{% if not is_page %}
+<div class="entry-meta">
+<span class="entry-date"><a href="{{ u(p.url) }}" rel="bookmark"><time class="entry-date" datetime="{{ p.dt.isoformat() }}">{{ heb_date(p.dt) }}</time></a></span>
+<span class="byline"><span class="author vcard"><a class="url fn n" href="{{ u(author_url(p.author)) }}" rel="author">{{ AUTHORS.get(p.author, p.author) }}</a></span></span>
+{% if p.comments %}<span class="comments-link"><a href="{{ u(p.url) }}#comments">{{ 'תגובה אחת' if p.comments == 1 else p.comments ~ ' תגובות' }}</a></span>{% endif %}
+</div>
+{% endif %}
+</header>
+{% if summary %}
+<div class="entry-summary"><p>{{ summary_text(p)|safe }}</p></div>
+{% else %}
+<div class="entry-content">
+{{ p.teaser|body }}
+{% if single %}
+{% if p.has_more %}<span id="more-{{ p.id }}"></span>
+{{ p.rest|body }}{% endif %}
+{% elif p.has_more %}
+<p><a href="{{ u(p.url) }}#more-{{ p.id }}" class="more-link">להמשיך לקרוא <span class="screen-reader-text">{{ p.title }}</span> <span class="meta-nav">&larr;</span></a></p>
+{% endif %}
+</div>
+{% endif %}
+{% if p.tags and not summary %}<footer class="entry-meta"><span class="tag-links">{% for t in p.tags %}<a href="{{ u(tag_url(t)) }}" rel="tag">{{ TAGS.get(t, t) }}</a>{% endfor %}</span></footer>{% endif %}
+</article>
+{% endmacro %}
+
+{% macro search_form() %}
+<form role="search" method="get" class="search-form" action="{{ u('/search/') }}"><label><span class="screen-reader-text">חיפוש:</span><input type="search" class="search-field" placeholder="חיפוש &hellip;" name="q"></label><input type="submit" class="search-submit" value="חיפוש"></form>
+{% endmacro %}

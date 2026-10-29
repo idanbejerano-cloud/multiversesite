@@ -1,0 +1,50 @@
+[
+ {
+  "id": 1278,
+  "parent": 0,
+  "author": "אבישי",
+  "url": "",
+  "date": "2016-12-28 22:32:02",
+  "html": "<p>אהבתי מאד את הכתבה  המענינת!!</p>\n<p>רק תקון קטן:  וונדר וומן קבלה את המהירות מהרמס, אל התקשורת .  ולא כפי שרשמתם.</p>\n"
+ },
+ {
+  "id": 1279,
+  "parent": 0,
+  "author": "Nachman Ben Harush",
+  "url": "https://www.facebook.com/app_scoped_user_id/620873392/",
+  "date": "2016-12-29 12:38:07",
+  "html": "<p>מאז שהיית ילדה קטנה?:)</p>\n"
+ },
+ {
+  "id": 1280,
+  "parent": 1278,
+  "author": "Nicky Nitzan Mohr",
+  "url": "https://www.facebook.com/app_scoped_user_id/1203284533085095/",
+  "date": "2016-12-29 13:19:25",
+  "html": "<p>ארמיס הוא הרמס, זה אותו האל :) (או אם בא לך ללכת על השם הרומי \"מרקורי\")</p>\n"
+ },
+ {
+  "id": 1281,
+  "parent": 1279,
+  "author": "Nicky Nitzan Mohr",
+  "url": "https://www.facebook.com/app_scoped_user_id/1203284533085095/",
+  "date": "2016-12-29 13:19:57",
+  "html": "<p>אני בת 34 היום אז עברו כמה שנים מאז שהייתי ילדה ;)</p>\n"
+ },
+ {
+  "id": 1282,
+  "parent": 1281,
+  "author": "Nachman Ben Harush",
+  "url": "https://www.facebook.com/app_scoped_user_id/620873392/",
+  "date": "2016-12-29 13:33:24",
+  "html": "<p>:-) לא רואים ;)<br />\nהאמת שחשבתי שאלון רוזנבלום כתב את הסקירה :P</p>\n"
+ },
+ {
+  "id": 1283,
+  "parent": 1282,
+  "author": "אלון רוזנבלום",
+  "url": "http://alonros.wordpress.com",
+  "date": "2016-12-30 11:38:44",
+  "html": "<p>לא, הפעם אלון רוזנבלום רק זכה לקרוא, ליהנות ולערוך את הסקירה :-)</p>\n"
+ }
+]

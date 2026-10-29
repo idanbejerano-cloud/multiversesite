@@ -1,0 +1,18 @@
+[
+ {
+  "id": 12,
+  "parent": 0,
+  "author": "octoleo2014",
+  "url": "http://octoleo.wordpress.com",
+  "date": "2015-02-05 15:48:07",
+  "html": "<p>נשמע מגניב. תמיד אהבתי את סיפורי הTeam Up האלו. זה ואת הVs. אבל זה בעיקר כי זה חוסך זמן בויכוחים.</p>\n"
+ },
+ {
+  "id": 18,
+  "parent": 12,
+  "author": "Tomer Soiker",
+  "url": "http://tomersoiker.wordpress.com",
+  "date": "2015-02-05 16:24:29",
+  "html": "<p>שני הגיליונות שיצאו עד כה לא היו משהו (השני מעט יותר טוב מהראשון).</p>\n"
+ }
+]

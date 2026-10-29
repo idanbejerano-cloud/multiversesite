@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import article %}
+{% set meta_description = post.description or post.excerpt %}
+{% set og_image = (SITE_URL ~ post.image) if post.image and not media(post.image).startswith('http') else (media(post.image) if post.image else None) %}
+{% block content %}
+{{ article(post, True, is_page) }}
+{% if not is_page %}
+<div class="sharedaddy"><h3 class="sd-title">שיתוף:</h3>
+<ul class="share-links">
+<li><a class="share-facebook" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u={{ (SITE_URL ~ post.url)|urlencode }}">פייסבוק</a></li>
+<li><a class="share-whatsapp" target="_blank" rel="noopener" href="https://wa.me/?text={{ (post.title ~ ' ' ~ SITE_URL ~ post.url)|urlencode }}">וואטסאפ</a></li>
+<li><a class="share-x" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?url={{ (SITE_URL ~ post.url)|urlencode }}&amp;text={{ post.title|urlencode }}">X</a></li>
+</ul></div>
+<nav class="navigation post-navigation" aria-label="ניווט בין פוסטים">
+<h1 class="screen-reader-text">ניווט בין פוסטים</h1>
+<div class="nav-links">
+{% if prev %}<a href="{{ u(prev.url) }}" rel="prev"><span class="meta-nav">פוסט קודם</span>{{ prev.title }}</a>{% endif %}
+{% if next %}<a href="{{ u(next.url) }}" rel="next"><span class="meta-nav">הפוסט הבא</span>{{ next.title }}</a>{% endif %}
+</div>
+</nav>
+<div id="comments" class="comments-area">
+{% if comments %}
+<h2 class="comments-title">{% if post.comments == 1 %}מחשבה אחת על{% else %}{{ post.comments }} מחשבות על{% endif %} &ldquo;{{ post.title }}&rdquo;</h2>
+<ol class="comment-list">
+{% for c in comments recursive %}
+<li id="comment-{{ c.id }}" class="comment{% if c.children %} parent{% endif %}">
+<article class="comment-body">
+<footer class="comment-meta">
+<div class="comment-author vcard"><span class="avatar"></span><b class="fn">{% if c.url %}<a href="{{ c.url }}" rel="external nofollow ugc" class="url">{{ c.author }}</a>{% else %}{{ c.author }}{% endif %}</b> <span class="says">הגיב:</span></div>
+<div class="comment-metadata"><a href="#comment-{{ c.id }}"><time datetime="{{ c.dt.isoformat() }}">{{ heb_date(c.dt) }} בשעה {{ c.dt.strftime('%H:%M') }}</time></a></div>
+</footer>
+<div class="comment-content">{{ c.html }}</div>
+</article>
+{% if c.children %}<ol class="children">{{ loop(c.children) }}</ol>{% endif %}
+</li>
+{% endfor %}
+</ol>
+{% endif %}
+<p class="no-comments">התגובות סגורות.</p>
+</div>
+{% endif %}
+{% endblock %}

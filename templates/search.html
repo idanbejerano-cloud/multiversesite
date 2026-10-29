@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import search_form %}
+{% block content %}
+<header class="page-header"><h1 class="page-title" id="search-title">חיפוש</h1></header>
+<div class="page-content search-page">{{ search_form() }}</div>
+<div id="search-results"></div>
+<noscript><p class="page-content">החיפוש באתר דורש JavaScript.</p></noscript>
+{% endblock %}
