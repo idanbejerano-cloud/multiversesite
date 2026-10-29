@@ -12,7 +12,8 @@ post.json:
   "date": "2026-11-01 14:05:00",         # local Israel time of the Facebook post
   "title": "optional title",             # default: first line of the text
   "text": "the post text, as plain text (line breaks kept)",
-  "images": ["/path/to/img1.jpg", ...]   # local files, optional
+  "images": ["/path/to/img1.jpg", ...],  # local files, optional
+  "categories": ["ביקורות-קולנוע"]       # optional, slugs from data/categories.json
 }
 
 Prints the new post's URL, or "SKIP <reason>" when the post was already added
@@ -87,7 +88,10 @@ def main(path):
         print('SKIP already added', seen[fb_id])
         return
 
-    people = {norm_name(p['facebook_name']): p for p in cfg.get('authors', [])}
+    people = {}
+    for p in cfg.get('authors', []):
+        for name in [p['facebook_name']] + p.get('aliases', []):
+            people[norm_name(name)] = p
     person = people.get(norm_name(post.get('author')))
     if not person:
         print('SKIP author not on the list:', post.get('author'))
@@ -101,6 +105,9 @@ def main(path):
             json.dump(authors, f, ensure_ascii=False, indent=1, sort_keys=True)
 
     date = dt.datetime.strptime(post['date'][:19], '%Y-%m-%d %H:%M:%S')
+    if cfg.get('start_date') and post['date'][:10] < cfg['start_date']:
+        print('SKIP posted before start_date', post['date'])
+        return
     text = post.get('text', '').strip()
     first = next((l.strip() for l in text.split('\n') if l.strip()), '')
     title = (post.get('title') or first or 'פוסט מהקבוצה').strip()
@@ -129,13 +136,15 @@ def main(path):
         body += (f'\n<p class="fb-source"><a href="{html.escape(post["fb_url"], quote=True)}" target="_blank" '
                  f'rel="noopener">לפוסט המקורי בקבוצת הפייסבוק</a></p>')
 
+    known_cats = load(os.path.join(ROOT, 'data', 'categories.json'), {})
+    cats = [c for c in (post.get('categories') or []) if c in known_cats] or cfg.get('categories') or ['כללי']
     pid = 900000 + len(seen) + 1
     while any(os.path.exists(os.path.join(ROOT, 'content', 'posts', str(y), f'{date:%Y-%m-%d}-{pid}.html'))
               for y in (date.year,)):
         pid += 1
     url = f'/{date:%Y/%m/%d}/fb-{fb_id}/'
     fm = {'id': pid, 'title': title, 'date': date.strftime('%Y-%m-%d %H:%M:%S'), 'url': url, 'author': login,
-          'categories': cfg.get('categories') or ['כללי'], 'tags': cfg.get('tags') or []}
+          'categories': cats, 'tags': cfg.get('tags') or []}
     if imgs:
         fm['image'] = f'/wp-content/uploads/{imgs[0][0]}'
     if flags:
