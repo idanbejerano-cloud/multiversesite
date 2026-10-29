@@ -1,0 +1,223 @@
+# Pages CMS (https://app.pagescms.org) – visual editor for this site
+media:
+- name: images
+  label: תמונות
+  input: static/wp-content/uploads
+  output: /wp-content/uploads
+  rename: safe
+  categories:
+  - image
+content:
+- name: posts
+  label: פוסטים
+  type: collection
+  path: content/posts
+  subfolders: true
+  format: yaml-frontmatter
+  filename: '{year}-{month}-{day}-{hour}{minute}{second}.html'
+  view:
+    fields:
+    - title
+    - date
+    - author
+    primary: title
+    sort:
+    - date
+    - title
+    search:
+    - title
+    default:
+      sort: date
+      order: desc
+  fields:
+  - name: title
+    label: כותרת
+    type: string
+    required: true
+  - name: slug
+    label: כתובת הפוסט
+    type: string
+    description: לא חובה. כמה מילים באנגלית עם מקפים (למשל dune-part-three-review) לכתובת קצרה וקבועה. אם ריק – הכתובת נבנית מהכותרת.
+  - name: date
+    label: תאריך ושעת פרסום
+    type: date
+    options:
+      time: true
+      format: yyyy-MM-dd HH:mm:ss
+  - name: author
+    label: כותב
+    type: select
+    options:
+      values:
+      - name: talmichels
+        label: Tal_Michels
+      - name: tomersoiker
+        label: Tomer Soiker
+      - name: cundason
+        label: cundason
+      - name: dorshilton
+        label: dorshilton
+      - name: hadarperry93
+        label: hadarperry93
+      - name: idangueta
+        label: idangueta
+      - name: naamashtein
+        label: naamashtein
+      - name: nattya01
+        label: nattya01
+      - name: talmalka
+        label: talmalka
+      - name: yehezkelsagiv
+        label: yehezkelsagiv
+      - name: lipaavihaybob
+        label: אביחי בוב
+      - name: alonros
+        label: אלון רוזנבלום
+      - name: alonshafir
+        label: אלון שפיר
+      - name: benaya33
+        label: בניה שגיב
+      - name: galpl
+        label: גל פלודה
+      - name: yanaybn
+        label: ינאי בן נח
+      - name: nitzangel
+        label: ניצן ניקי מור
+      - name: adiperl
+        label: עדי פרל
+      - name: idanb
+        label: עידן בז'רנו
+      - name: brdroey
+        label: רועי ברדה
+      - name: shabso
+        label: שי גבסו
+  - name: categories
+    label: קטגוריות
+    type: select
+    options:
+      multiple: true
+      values:
+      - name: geekout
+        label: Geekout
+      - name: multi-pass
+        label: Multi-Pass
+      - name: shaninigans
+        label: Shaninigans
+      - name: בחזרה-לעבר
+        label: בחזרה לעבר
+      - name: טלוויזיה
+        label: טלוויזיה
+      - name: ביקורות-טלוויזיה
+        label: טלוויזיה › ביקורות טלוויזיה
+      - name: חדשות-טלוויזיה
+        label: טלוויזיה › חדשות טלוויזיה
+      - name: טריילרים
+        label: טריילרים
+      - name: כללי
+        label: כללי
+      - name: מפה-משם-ומכל-מקום-שבעולם
+        label: מפה משם ומכל מקום שבעולם
+      - name: קולנוע
+        label: קולנוע
+      - name: ביקורות-קולנוע
+        label: קולנוע › ביקורות קולנוע
+      - name: חדשות-קולנוע
+        label: קולנוע › חדשות קולנוע
+      - name: קומיקס
+        label: קומיקס
+      - name: ביקורות-קומיקס
+        label: קומיקס › ביקורות קומיקס
+      - name: חדשות-קומיקס
+        label: קומיקס › חדשות קומיקס
+  - name: tags
+    label: תגיות
+    type: string
+    list: true
+    description: מילה או ביטוי בכל שורה
+  - name: image
+    label: תמונה ראשית
+    type: image
+    options:
+      media: images
+  - name: excerpt
+    label: תקציר (לא חובה)
+    type: text
+    description: מוצג בכרטיס בדף הבית. אם ריק – נלקחת פתיחת הפוסט.
+  - name: body
+    label: תוכן
+    type: rich-text
+    options:
+      format: html
+      media: images
+    description: 'סרטון יוטיוב, ציוץ, פוסט פייסבוק או אינסטגרם: מדביקים את הקישור לבד בשורה, והוא יוצג באתר כנגן.'
+  - name: id
+    type: number
+    hidden: true
+  - name: url
+    type: string
+    hidden: true
+  - name: comments
+    type: number
+    hidden: true
+  - name: embeds
+    type: string
+    list: true
+    hidden: true
+  - name: description
+    type: string
+    hidden: true
+  - name: source
+    type: string
+    hidden: true
+  - name: fb_id
+    type: string
+    hidden: true
+- name: pages
+  label: עמודים
+  type: collection
+  path: content/pages
+  format: yaml-frontmatter
+  filename: '{year}{month}{day}-{hour}{minute}{second}.html'
+  view:
+    fields:
+    - title
+    primary: title
+  fields:
+  - name: title
+    label: כותרת
+    type: string
+    required: true
+  - name: slug
+    label: כתובת העמוד
+    type: string
+    description: 'לעמוד חדש: באנגלית, למשל contact. זו תהיה כתובת העמוד. אם ריק – נבנית מהכותרת.'
+  - name: image
+    label: תמונה ראשית
+    type: image
+    options:
+      media: images
+  - name: body
+    label: תוכן
+    type: rich-text
+    options:
+      format: html
+      media: images
+  - name: id
+    type: number
+    hidden: true
+  - name: url
+    type: string
+    hidden: true
+  - name: date
+    type: string
+    hidden: true
+  - name: author
+    type: string
+    hidden: true
+  - name: comments
+    type: number
+    hidden: true
+  - name: embeds
+    type: string
+    list: true
+    hidden: true

@@ -9,6 +9,7 @@ Environment:
     SITE_URL   absolute address used in feeds/sitemap (defaults to site.yml url + BASE_PATH).
 """
 import datetime as dt
+import hashlib
 import html
 import json
 import os
@@ -23,6 +24,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import embeds  # noqa: E402
 OUT = os.path.join(ROOT, '_site')
 CFG = yaml.safe_load(open(os.path.join(ROOT, 'site.yml'), encoding='utf-8'))
 BASE = os.environ.get('BASE_PATH', '').rstrip('/')
@@ -202,7 +205,41 @@ def author_url(login):
 
 
 # ------------------------------------------------------------------ content
-FM_RE = re.compile(r'^---\n(.*?)\n---\n(.*)$', re.S)
+FM_RE = re.compile(r'^---\n(.*?)\n---\n?(.*)$', re.S)
+
+# A link that sits alone on its line (YouTube, X/Twitter, Facebook, Instagram, Vimeo, an .mp3 …)
+# becomes an embedded player, like WordPress does. Posts keep just the link, so they stay easy to edit.
+_URL = r'https?://[^\s<>"\']+'
+AUTO_RE = re.compile(r'(^|<p[^>]*>|<br\s*/?>|</p>|<div[^>]*>|</div>|</figure>|</blockquote>|</h[1-6]>|</ul>|</ol>)'
+                     r'([ \t]*\n?[ \t]*)(' + _URL + r')(?=\s*(?:<br\s*/?>|</p>|</div>|<p[\s>]|<div[\s>]|<figure|<h[1-6]|$))',
+                     re.M)
+AUTO_LINK_RE = re.compile(r'<p>\s*<a href="(' + _URL + r')"[^>]*>\s*\1\s*</a>\s*</p>')
+
+
+def autoembed(h, flags):
+    def one(m):
+        e = embeds.embed_html(html.unescape(m.group(3)), flags)
+        return m.group(1) + m.group(2) + e if e else m.group(0)
+
+    def link(m):
+        e = embeds.embed_html(html.unescape(m.group(1)), flags)
+        return e or m.group(0)
+    return AUTO_RE.sub(one, AUTO_LINK_RE.sub(link, h))
+
+
+def slugify(text):
+    text = re.sub(r'[\s_/]+', '-', str(text).strip().lower())
+    return re.sub(r'[^\w\-א-ת]', '', text).strip('-') or 'post'
+
+
+def parse_date(v):
+    v = str(v).replace('T', ' ').strip()
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+        try:
+            return dt.datetime.strptime(v[:len(dt.datetime(2000, 1, 1).strftime(fmt))], fmt)
+        except ValueError:
+            pass
+    raise ValueError(f'bad date: {v}')
 
 
 class Post(dict):
@@ -221,20 +258,42 @@ def load_items(kind):
             if not m:
                 print('skipping (no front matter):', fn, file=sys.stderr)
                 continue
-            p = Post(yaml.safe_load(m.group(1)))
-            body = m.group(2).strip()
+            p = Post(yaml.safe_load(m.group(1)) or {})
+            body = (m.group(2) or p.pop('body', '') or '').strip()
             if '<!--more-->' in body:
                 teaser, rest = body.split('<!--more-->', 1)
                 p['has_more'] = True
             else:
                 teaser, rest = body, ''
                 p['has_more'] = False
-            p['teaser'] = teaser.strip()
-            p['rest'] = rest.strip()
-            p['dt'] = dt.datetime.strptime(str(p['date'])[:19], '%Y-%m-%d %H:%M:%S')
+            flags = set(p.get('embeds') or [])
+            p['teaser'] = autoembed(teaser.strip(), flags)
+            p['rest'] = autoembed(rest.strip(), flags)
+            p['embeds'] = sorted(flags)
+            p['dt'] = parse_date(p.get('date') or dt.datetime.fromtimestamp(os.path.getmtime(os.path.join(dp, fn))))
             p['kind'] = kind
-            p.setdefault('categories', [])
-            p.setdefault('tags', [])
+            stem = re.sub(r'^\d{4}-\d\d-\d\d-', '', fn[:-5])
+            if not p.get('id'):   # posts made in the editor: a stable number from the file name
+                p['id'] = 500000000 + int(hashlib.md5(fn.encode()).hexdigest()[:7], 16)
+            if not p.get('url'):
+                slug = slugify(p.get('slug') or p.get('title') or stem)
+                p['url'] = (f'/{p["dt"]:%Y/%m/%d}/{slug}/' if kind == 'posts' else f'/{slug}/')
+            if not p.get('author'):
+                p['author'] = CFG.get('default_author', 'idanb')
+            p['categories'] = [c for c in (p.get('categories') or []) if c] or (['כללי'] if kind == 'posts' else [])
+            tags = []
+            for t in p.get('tags') or []:          # tags may be slugs (old posts) or plain names (new posts)
+                t = str(t).strip()
+                if not t:
+                    continue
+                if t not in TAGS:
+                    sl = slugify(t)
+                    TAGS.setdefault(sl, t)
+                    t = sl
+                tags.append(t)
+            p['tags'] = tags
+            if p.get('image') and not str(p['image']).startswith('/'):
+                p['image'] = '/' + str(p['image'])
             p['comments'] = int(p.get('comments') or 0)
             items.append(p)
     return items
