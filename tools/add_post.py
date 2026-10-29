@@ -59,7 +59,7 @@ def text_to_html(text, flags):
                 continue
         parts = []
         for line in lines:
-            esc = html.escape(line)
+            esc = html.escape(line, quote=False)
             esc = re.sub(r'(https?://[^\s<]+)', lambda m: f'<a href="{m.group(1)}">{m.group(1)}</a>', esc)
             parts.append(esc)
         out.append('<p>' + '<br />\n'.join(parts) + '</p>')
@@ -78,12 +78,24 @@ def save_image(src, rel_base):
         return rel, im.width, im.height
 
 
+def mark(ids, reason):
+    """Record Facebook post ids as handled (e.g. skipped as off-topic) so later runs ignore them."""
+    seen = load(SEEN, {})
+    for i in ids:
+        seen.setdefault(str(i), reason)
+    with open(SEEN, 'w', encoding='utf-8') as f:
+        json.dump(seen, f, ensure_ascii=False, indent=1, sort_keys=True)
+
+
 def main(path):
     with open(path, encoding='utf-8') as f:
         post = json.load(f)
     cfg = load(CONFIG, {})
     seen = load(SEEN, {})
     fb_id = str(post['fb_id']).strip()
+    if cfg.get('after_id') and int(fb_id) <= int(cfg['after_id']):
+        print('SKIP older than the starting point (after_id)')
+        return
     if fb_id in seen:
         print('SKIP already added', seen[fb_id])
         return
@@ -163,4 +175,7 @@ def main(path):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    if sys.argv[1] == '--skip':          # add_post.py --skip <reason> <id> [<id> ...]
+        mark(sys.argv[3:], 'skipped: ' + sys.argv[2])
+    else:
+        main(sys.argv[1])

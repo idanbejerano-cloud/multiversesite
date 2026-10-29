@@ -1,11 +1,32 @@
 {
-  "group_url": "https://www.facebook.com/groups/ulammale",
-  "start_date": "2026-10-29",
-  "authors": [
-    {"facebook_name": "Gal Pluda", "aliases": ["גל פלודה"], "site_author": "galpl"},
-    {"facebook_name": "Idan Bejerano", "aliases": [], "site_author": "idanb"}
-  ],
-  "categories": ["כללי"],
-  "tags": [],
-  "link_back": true
+ "group_url": "https://www.facebook.com/groups/ulammale",
+ "start_date": "2026-10-29",
+ "authors": [
+  {
+   "facebook_name": "Gal Pluda",
+   "aliases": [
+    "גל פלודה"
+   ],
+   "facebook_user_id": "1315578068",
+   "site_author": "galpl",
+   "display_name": "גל פלודה"
+  },
+  {
+   "facebook_name": "Idan Bejerano",
+   "aliases": [
+    "עידן בז'רנו"
+   ],
+   "facebook_user_id": "1014588686",
+   "site_author": "idanb",
+   "display_name": "עידן בז'רנו"
+  }
+ ],
+ "categories": [
+  "כללי"
+ ],
+ "tags": [],
+ "link_back": true,
+ "group_id": "2036529056615413",
+ "feed_url": "https://www.facebook.com/groups/ulammale/?sorting_setting=CHRONOLOGICAL",
+ "after_id": "4531481433786817"
 }
