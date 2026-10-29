@@ -52,3 +52,5 @@ top_posts:
 # Extra redirects (old address -> new address)
 extra_redirects:
   /Geekout/: /geekout/
+  /admin/: https://app.pagescms.org/
+  /wp-admin/: https://app.pagescms.org/
