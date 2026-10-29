@@ -9,7 +9,7 @@ per_page: 10
 
 # While images are still being copied over, any image that is missing from
 # static/ is loaded from this address instead. Set to '' once all media is in.
-media_fallback: https://multiversesite.com/wp-content/uploads/
+media_fallback: ''
 
 # Main menu (category slugs from data/categories.json, or pages)
 menu:

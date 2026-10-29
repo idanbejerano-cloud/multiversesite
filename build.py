@@ -255,6 +255,7 @@ def render_list(base_url, posts, title=None, kind='home', description=None, body
         write(url, tpl.render(posts=chunk, archive_title=title, archive_description=description,
                               page_title=page_title, pagination=paginate_links(n, total, base_url) if total > 1 else [],
                               embeds=set() if summary else flags, body_class=body_class, canonical=url, page_num=n,
+                              is_list=True,
                               summary=summary))
 
 
@@ -329,10 +330,10 @@ def main():
         next_p = posts[i - 1] if i > 0 else None
         write(p['url'], single.render(post=p, prev=prev_p, next=next_p, comments=comments_for(p['id']),
                                       embeds=set(p.get('embeds') or []), page_title=p['title'],
-                                      body_class='single single-post', canonical=p['url']))
+                                      body_class='single single-post', canonical=p['url'], is_singular=True))
     for p in pages:
         write(p['url'], single.render(post=p, comments=[], embeds=set(p.get('embeds') or []), page_title=p['title'],
-                                      body_class='page', canonical=p['url'], is_page=True))
+                                      body_class='page', canonical=p['url'], is_page=True, is_singular=True))
 
     # lists
     render_list('/', posts)
@@ -359,7 +360,7 @@ def main():
                     'i': p.get('image') and media(p['image'])})
     with open(os.path.join(OUT, 'search-index.json'), 'w', encoding='utf-8') as f:
         json.dump(idx, f, ensure_ascii=False, separators=(',', ':'))
-    write('/search/', env.get_template('search.html').render(page_title='חיפוש', body_class='search', canonical='/search/'))
+    write('/search/', env.get_template('search.html').render(page_title='חיפוש', body_class='search', canonical='/search/', is_list=True))
     write('/404.html', env.get_template('404.html').render(page_title='הדף לא נמצא', body_class='error404'))
 
     # redirects

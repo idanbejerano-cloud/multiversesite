@@ -17,16 +17,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400&amp;display=swap">
-<link rel="stylesheet" href="{{ u('/assets/style.css') }}?v=3">
+<link rel="stylesheet" href="{{ u('/assets/theme/genericons/genericons.css') }}?v=3.4.1">
+<link rel="stylesheet" href="{{ u('/assets/theme/style.css') }}?v=3.5">
+<link rel="stylesheet" href="{{ u('/assets/theme/css/blocks.css') }}?v=3.5">
+<link rel="stylesheet" href="{{ u('/assets/theme/rtl.css') }}?v=3.5">
+<link rel="stylesheet" href="{{ u('/assets/theme/css/style-wpcom.css') }}?v=3.5">
+<link rel="stylesheet" href="{{ u('/assets/theme/css/style-wpcom-rtl.css') }}?v=3.5">
+<link rel="stylesheet" href="{{ u('/assets/style.css') }}?v=4">
 <link rel="icon" href="{{ u('/assets/icon.png') }}">
 </head>
-<body class="rtl {{ body_class }} header-image full-width" data-base="{{ BASE }}">
+<body class="rtl {{ body_class }} group-blog header-image{% if is_list %} list-view{% endif %} full-width{% if is_singular %} singular{% endif %} custom-colors" data-base="{{ BASE }}">
 <div id="page" class="hfeed site">
 <div id="site-header"><a href="{{ u('/') }}" rel="home"><img src="{{ media(cfg.header_image) }}" width="1260" height="240" alt="{{ cfg.title }}"></a></div>
 <header id="masthead" class="site-header">
 <div class="header-main">
 <h1 class="site-title"><a href="{{ u('/') }}" rel="home">{{ cfg.title }}</a></h1>
-<div class="search-toggle"><a href="#search-container" aria-expanded="false" aria-controls="search-container"><span class="screen-reader-text">חיפוש</span></a></div>
+<div class="search-toggle"><a href="#search-container" class="screen-reader-text" aria-expanded="false" aria-controls="search-container">חיפוש</a></div>
 <nav id="primary-navigation" class="site-navigation primary-navigation" aria-label="תפריט ראשי">
 <button class="menu-toggle" aria-expanded="false">תפריט ראשי</button>
 <a class="screen-reader-text skip-link" href="#content">לדלג לתוכן</a>
@@ -62,7 +68,7 @@
 <div class="site-info"><a href="{{ u('/') }}">{{ cfg.title }}</a> &middot; {{ cfg.description }}</div>
 </footer>
 </div>
-<script src="{{ u('/assets/site.js') }}?v=3" defer></script>
+<script src="{{ u('/assets/site.js') }}?v=4" defer></script>
 {% if 'twitter' in embeds %}<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>{% endif %}
 {% if 'instagram' in embeds %}<script async src="https://www.instagram.com/embed.js"></script>{% endif %}
 {% if 'facebook' in embeds %}<div id="fb-root"></div><script async defer crossorigin="anonymous" src="https://connect.facebook.net/he_IL/sdk.js#xfbml=1&amp;version=v19.0"></script>{% endif %}
