@@ -13,7 +13,8 @@ post.json:
   "title": "optional title",             # default: first line of the text
   "text": "the post text, as plain text (line breaks kept)",
   "images": ["/path/to/img1.jpg", ...],  # local files, optional
-  "categories": ["ביקורות-קולנוע"]       # optional, slugs from data/categories.json
+  "categories": ["ביקורות-קולנוע"],      # optional, slugs from data/categories.json
+  "force": true                          # optional: import even if older than after_id
 }
 
 Prints the new post's URL, or "SKIP <reason>" when the post was already added
@@ -93,7 +94,7 @@ def main(path):
     cfg = load(CONFIG, {})
     seen = load(SEEN, {})
     fb_id = str(post['fb_id']).strip()
-    if cfg.get('after_id') and int(fb_id) <= int(cfg['after_id']):
+    if cfg.get('after_id') and int(fb_id) <= int(cfg['after_id']) and not post.get('force'):
         print('SKIP older than the starting point (after_id)')
         return
     if fb_id in seen:
