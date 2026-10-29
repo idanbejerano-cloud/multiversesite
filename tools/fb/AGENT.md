@@ -29,9 +29,12 @@ accept, invite or change anything there.**
    the group), job ads, a bare share or link with fewer than ~2 sentences of the author's own text,
    and scheduled posts that aren't published yet ("in 18 hours" etc.).
    For a skipped post run `python3 tools/add_post.py --skip "<short reason>" <id>`.
-3. Images (up to 6): `curl -sL -o /tmp/fbimg/<id>-<n>.jpg "<url>"` for each URL from step 1.
-   If the download fails (the fbcdn.net domain may be blocked for this environment), continue
-   without images — never invent or substitute images.
+3. Images (up to 6) — downloaded inside the browser, so it works even when this environment can't
+   reach Facebook's servers directly. On the same post page run the contents of
+   `tools/fb/fetch_images.js` with javascript_tool. Its result is deliberately too large to show, so
+   the tool answers that the output "has been saved to <file>". Then run
+   `python3 tools/fb/save_images.py <that file> /tmp/fbimg/<id>` — it prints the image files it wrote.
+   If the post has no images, or this fails, continue without images — never invent or substitute images.
 4. Categories — slugs from `data/categories.json`:
    movie review → `["ביקורות-קולנוע", "קולנוע"]`, movie news/trailer → `["חדשות-קולנוע", "קולנוע"]`,
    TV review → `["ביקורות-טלוויזיה", "טלוויזיה"]`, TV news → `["חדשות-טלוויזיה", "טלוויזיה"]`,
