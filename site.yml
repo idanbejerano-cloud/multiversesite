@@ -1,56 +1,57 @@
-# Site settings for build.py
+# Site settings for build.py — also editable in Pages CMS ("הגדרות האתר").
+# menu items: title + either cat (category slug from data/categories.json) or link (/about/ or a full address)
+# sidebar widget types: top_posts, facebook, rss, recent, archives, categories, text, html
 title: מולטיוורס
 description: קומיקס, קולנוע, טלוויזיה וכל מה שחוצה עולמות
-url: https://multiversesite.com          # final public address
+url: https://multiversesite.com
 language: he
 header_image: /wp-content/uploads/2019/03/multiverse-site-header.jpg
 facebook: https://www.facebook.com/multiversesite
 per_page: 20
-
-# While images are still being copied over, any image that is missing from
-# static/ is loaded from this address instead. Set to '' once all media is in.
 media_fallback: ''
-
-# Main menu (category slugs from data/categories.json, or pages)
 menu:
-  - page: /
-    title: דף הבית
-  - cat: קולנוע
-    children:
-      - cat: חדשות-קולנוע
-      - cat: ביקורות-קולנוע
-      - cat: טריילרים
-  - cat: קומיקס
-    children:
-      - cat: חדשות-קומיקס
-      - cat: ביקורות-קומיקס
-  - cat: טלוויזיה
-    children:
-      - cat: חדשות-טלוויזיה
-      - cat: ביקורות-טלוויזיה
-      - cat: טריילרים
-  - cat: multi-pass
-  - cat: shaninigans
-  - cat: geekout
-    children:
-      - page: /geekout/
-        title: גיקאאוט – כל מה שגיק!
-  - page: /about/
-    title: אודות
-
-# "Most viewed" sidebar widget (as it appears on the original site)
+- title: דף הבית
+  link: /
+- cat: קולנוע
+  children:
+  - cat: חדשות-קולנוע
+  - cat: ביקורות-קולנוע
+  - cat: טריילרים
+- cat: קומיקס
+  children:
+  - cat: חדשות-קומיקס
+  - cat: ביקורות-קומיקס
+- cat: טלוויזיה
+  children:
+  - cat: חדשות-טלוויזיה
+  - cat: ביקורות-טלוויזיה
+  - cat: טריילרים
+- cat: multi-pass
+- cat: shaninigans
+- cat: geekout
+  children:
+  - title: גיקאאוט – כל מה שגיק!
+    link: /geekout/
+- title: אודות
+  link: /about/
 top_posts:
-  - /2016/05/06/ehrenreich-lands-is-young-han-solo/
-  - /2017/09/30/electric-dreams-episode-1-and-2-review/
-  - /2015/10/17/flash-review-2x02-flash-of-two-worlds/
-  - /2015/02/21/tv-news-compilation-21-02-2015/
-  - /2015/03/02/fight-club-2-is-coming-to-comics-this-may/
-  - /2015/06/21/miles-morales-spider-man-new-series/
-  - /2017/08/31/comico-europe-dates-and-places/
-  - /2019/11/02/jumanji-2-trailer-2/
-
-# Extra redirects (old address -> new address)
-extra_redirects:
-  /Geekout/: /geekout/
-  /admin/: https://app.pagescms.org/
-  /wp-admin/: https://app.pagescms.org/
+- /2016/05/06/ehrenreich-lands-is-young-han-solo/
+- /2017/09/30/electric-dreams-episode-1-and-2-review/
+- /2015/10/17/flash-review-2x02-flash-of-two-worlds/
+- /2015/02/21/tv-news-compilation-21-02-2015/
+- /2015/03/02/fight-club-2-is-coming-to-comics-this-may/
+- /2015/06/21/miles-morales-spider-man-new-series/
+- /2017/08/31/comico-europe-dates-and-places/
+- /2019/11/02/jumanji-2-trailer-2/
+sidebar:
+- type: top_posts
+  title: הרשומות והעמודים הנצפים ביותר
+- type: facebook
+  title: מולטיוורס בפייסבוק
+- type: rss
+  title: RSS
+- type: recent
+  title: פוסטים אחרונים
+  count: 10
+- type: archives
+  title: ארכיונים

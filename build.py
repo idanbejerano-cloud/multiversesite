@@ -46,6 +46,8 @@ CATS = jload('categories.json')
 TAGS = jload('tags.json')
 REDIRECTS = jload('redirects.json')
 REDIRECTS.update(CFG.get('extra_redirects') or {})
+if os.path.exists(os.path.join(ROOT, 'data', 'extra_redirects.json')):
+    REDIRECTS.update(jload('extra_redirects.json'))
 
 # ------------------------------------------------------------------ helpers
 UPLOADS_DIR = os.path.join(ROOT, 'static', 'wp-content', 'uploads')
@@ -278,6 +280,9 @@ def load_items(kind):
             if not p.get('url'):
                 slug = slugify(p.get('slug') or p.get('title') or stem)
                 p['url'] = (f'/{p["dt"]:%Y/%m/%d}/{slug}/' if kind == 'posts' else f'/{slug}/')
+            if p.get('author_name'):          # a writer who isn't on the list yet
+                p['author'] = slugify(p['author_name'])
+                AUTHORS.setdefault(p['author'], p['author_name'])
             if not p.get('author'):
                 p['author'] = CFG.get('default_author', 'idanb')
             p['categories'] = [c for c in (p.get('categories') or []) if c] or (['כללי'] if kind == 'posts' else [])
@@ -415,18 +420,34 @@ def main():
         year_posts[p['dt'].year].append(p)
 
     # sidebar & header are the same on every page: render once
+    def norm_link(link):
+        """'https://multiversesite.com/2016/05/06/x/' or '/multiversesite/2016/…' -> '/2016/05/06/x/'"""
+        from urllib.parse import unquote, urlparse
+        link = str(link or '').strip()
+        if not link:
+            return ''
+        pu = urlparse(link)
+        if pu.scheme and pu.netloc and not re.search(r'multiversesite|github\.io', pu.netloc):
+            return link                       # an outside address: keep as is
+        path = unquote(pu.path or '/')
+        if BASE and path.startswith(BASE + '/'):
+            path = path[len(BASE):]
+        path = re.sub(r'^/multiversesite(?=/)', '', path) if 'github.io' in pu.netloc else path
+        if not path.endswith('/') and '.' not in path.rsplit('/', 1)[-1]:
+            path += '/'
+        return path
+
     top = []
     thumbs_dir = os.path.join(OUT, 'assets', 'thumbs')
     os.makedirs(thumbs_dir, exist_ok=True)
     for url in CFG.get('top_posts') or []:
-        p = by_url.get(url)
+        p = by_url.get(norm_link(url))
         if not p:
+            print('top_posts: no post at', url, file=sys.stderr)
             continue
         img = media(p['image']) if p.get('image') else None
         if p.get('image'):
-            from urllib.parse import unquote
-            rel = unquote(p['image'][len('/wp-content/uploads/'):])
-            src = os.path.join(UPLOADS_DIR, MEDIA_MAP.get(rel, rel))
+            src = image_file(p)
             if os.path.exists(src):
                 try:
                     from PIL import Image, ImageOps
@@ -439,17 +460,22 @@ def main():
         top.append({'url': p['url'], 'title': p['title'], 'img': img})
     months = [{'y': y, 'm': m, 'name': f'{HEB_MONTHS[m - 1]} {y}', 'count': len(v), 'url': f'/{y}/{m:02d}/'}
               for (y, m), v in sorted(month_posts.items(), reverse=True)]
+
+    def entry(it):
+        it = it or {}
+        if it.get('cat'):
+            return {'title': it.get('title') or CATS.get(it['cat'], {}).get('name', it['cat']), 'url': cat_url(it['cat'])}
+        return {'title': it.get('title') or '', 'url': norm_link(it.get('link') or it.get('page') or '/')}
     menu = []
-    for item in CFG['menu']:
-        def entry(it):
-            if 'cat' in it:
-                return {'title': it.get('title') or CATS.get(it['cat'], {}).get('name', it['cat']),
-                        'url': cat_url(it['cat'])}
-            return {'title': it['title'], 'url': it['page']}
+    for item in CFG.get('menu') or []:
         e = entry(item)
-        e['children'] = [entry(c) for c in item.get('children', [])]
+        e['children'] = [entry(c) for c in (item or {}).get('children') or []]
         menu.append(e)
-    env.globals['sidebar'] = Markup(env.get_template('_sidebar.html').render(top=top, recent=posts[:10], months=months))
+    widgets = CFG.get('sidebar') or [{'type': t} for t in ('top_posts', 'facebook', 'rss', 'recent', 'archives')]
+    cats_list = sorted(((CATS.get(c, {}).get('name', c), cat_url(c), len(v)) for c, v in cat_posts.items()
+                        if not CATS.get(c, {}).get('parent')), key=lambda x: -x[2])
+    env.globals['sidebar'] = Markup(env.get_template('_sidebar.html').render(
+        widgets=widgets, top=top, posts=posts, months=months, cats_list=cats_list))
     env.globals['menu'] = menu
 
     # singles

@@ -1,19 +1,33 @@
 <div id="primary-sidebar" class="primary-sidebar widget-area" role="complementary">
-{% if top %}
-<aside class="widget widget_top-posts"><h1 class="widget-title">הרשומות והעמודים הנצפים ביותר</h1>
-<div class="widgets-grid-layout">{% for t in top %}<div class="widget-grid-view-image"><a href="{{ u(t.url) }}" title="{{ t.title }}"><img loading="lazy" width="200" height="200" src="{{ t.img }}" alt="{{ t.title }}"></a></div>{% endfor %}</div>
+{% for w in widgets %}{% set t = w.type %}
+{% if t == 'top_posts' and top %}
+<aside class="widget widget_top-posts"><h1 class="widget-title">{{ w.title or 'הרשומות והעמודים הנצפים ביותר' }}</h1>
+<div class="widgets-grid-layout">{% for x in top %}<div class="widget-grid-view-image"><a href="{{ u(x.url) }}" title="{{ x.title }}"><img loading="lazy" width="200" height="200" src="{{ x.img }}" alt="{{ x.title }}"></a></div>{% endfor %}</div>
 </aside>
-{% endif %}
-<aside class="widget widget_facebook_likebox"><h1 class="widget-title"><a href="{{ cfg.facebook }}" target="_blank" rel="noopener">{{ cfg.title }} בפייסבוק</a></h1>
-<p><a class="fb-follow" href="{{ cfg.facebook }}" target="_blank" rel="noopener">לעמוד הפייסבוק שלנו</a></p>
+{% elif t == 'facebook' %}
+<aside class="widget widget_facebook_likebox"><h1 class="widget-title"><a href="{{ w.link or cfg.facebook }}" target="_blank" rel="noopener">{{ w.title or (cfg.title ~ ' בפייסבוק') }}</a></h1>
+<p><a class="fb-follow" href="{{ w.link or cfg.facebook }}" target="_blank" rel="noopener">לעמוד הפייסבוק שלנו</a></p>
 </aside>
-<aside class="widget widget_rss_links"><h1 class="widget-title">RSS</h1>
+{% elif t == 'rss' %}
+<aside class="widget widget_rss_links"><h1 class="widget-title">{{ w.title or 'RSS' }}</h1>
 <ul><li><a href="{{ u('/feed/') }}" title="להירשם לעדכוני פוסטים">RSS – פוסטים</a></li></ul>
 </aside>
-<aside class="widget widget_recent_entries"><h1 class="widget-title">פוסטים אחרונים</h1>
-<ul>{% for p in recent %}<li><a href="{{ u(p.url) }}">{{ p.title }}</a></li>{% endfor %}</ul>
+{% elif t == 'recent' %}
+<aside class="widget widget_recent_entries"><h1 class="widget-title">{{ w.title or 'פוסטים אחרונים' }}</h1>
+<ul>{% for p in posts[:(w.count or 10)|int] %}<li><a href="{{ u(p.url) }}">{{ p.title }}</a></li>{% endfor %}</ul>
 </aside>
-<aside class="widget widget_archive"><h1 class="widget-title">ארכיונים</h1>
+{% elif t == 'archives' %}
+<aside class="widget widget_archive"><h1 class="widget-title">{{ w.title or 'ארכיונים' }}</h1>
 <ul>{% for m in months %}<li><a href="{{ u(m.url) }}">{{ m.name }}</a>&nbsp;({{ m.count }})</li>{% endfor %}</ul>
 </aside>
+{% elif t == 'categories' %}
+<aside class="widget widget_categories"><h1 class="widget-title">{{ w.title or 'קטגוריות' }}</h1>
+<ul>{% for name, url, n in cats_list %}<li><a href="{{ u(url) }}">{{ name }}</a>&nbsp;({{ n }})</li>{% endfor %}</ul>
+</aside>
+{% elif t in ('text', 'html') %}
+<aside class="widget widget_text">{% if w.title %}<h1 class="widget-title">{{ w.title }}</h1>{% endif %}
+<div class="textwidget">{{ (w.content or '')|safe }}</div>
+</aside>
+{% endif %}
+{% endfor %}
 </div>

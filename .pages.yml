@@ -91,6 +91,11 @@ content:
         label: רועי ברדה
       - name: shabso
         label: שי גבסו
+    description: אם הכותב לא ברשימה, השאירו ריק ומלאו את "שם כותב אחר".
+  - name: author_name
+    label: שם כותב אחר
+    type: string
+    description: רק לכותב שאינו ברשימה – השם כפי שיוצג באתר.
   - name: categories
     label: קטגוריות
     type: select
@@ -221,3 +226,153 @@ content:
     type: string
     list: true
     hidden: true
+- name: settings
+  label: הגדרות האתר
+  type: file
+  path: site.yml
+  format: yaml
+  fields:
+  - name: title
+    label: שם האתר
+    type: string
+    required: true
+  - name: description
+    label: תיאור (מופיע בראש סרגל הצד)
+    type: string
+  - name: header_image
+    label: תמונת הראש (באנר, 1260×240)
+    type: image
+    options:
+      media: images
+  - name: facebook
+    label: כתובת עמוד הפייסבוק
+    type: string
+  - name: per_page
+    label: מספר פוסטים בכל עמוד ברשימות
+    type: number
+  - name: menu
+    label: תפריט ראשי
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{title}{cat}'
+    fields:
+    - &id001
+      name: title
+      label: שם בתפריט
+      type: string
+      description: לא חובה כשבוחרים קטגוריה (יוצג שם הקטגוריה).
+    - &id002
+      name: cat
+      label: קטגוריה
+      type: select
+      options:
+        values:
+        - name: geekout
+          label: Geekout
+        - name: multi-pass
+          label: Multi-Pass
+        - name: shaninigans
+          label: Shaninigans
+        - name: בחזרה-לעבר
+          label: בחזרה לעבר
+        - name: טלוויזיה
+          label: טלוויזיה
+        - name: ביקורות-טלוויזיה
+          label: טלוויזיה › ביקורות טלוויזיה
+        - name: חדשות-טלוויזיה
+          label: טלוויזיה › חדשות טלוויזיה
+        - name: טריילרים
+          label: טריילרים
+        - name: כללי
+          label: כללי
+        - name: מפה-משם-ומכל-מקום-שבעולם
+          label: מפה משם ומכל מקום שבעולם
+        - name: קולנוע
+          label: קולנוע
+        - name: ביקורות-קולנוע
+          label: קולנוע › ביקורות קולנוע
+        - name: חדשות-קולנוע
+          label: קולנוע › חדשות קולנוע
+        - name: קומיקס
+          label: קומיקס
+        - name: ביקורות-קומיקס
+          label: קומיקס › ביקורות קומיקס
+        - name: חדשות-קומיקס
+          label: קומיקס › חדשות קומיקס
+    - &id003
+      name: link
+      label: או קישור
+      type: string
+      description: כתובת בתוך האתר (למשל /about/) או כתובת מלאה. לא צריך אם בחרתם קטגוריה.
+    - name: children
+      label: תת-תפריט
+      type: object
+      list:
+        collapsible:
+          collapsed: true
+          summary: '{title}{cat}'
+      fields:
+      - *id001
+      - *id002
+      - *id003
+  - name: sidebar
+    label: סרגל הצד (וידג'טים לפי הסדר)
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{title} ({type})'
+    fields:
+    - name: type
+      label: סוג
+      type: select
+      required: true
+      options:
+        values:
+        - name: top_posts
+          label: הנצפים ביותר (תמונות)
+        - name: recent
+          label: פוסטים אחרונים
+        - name: archives
+          label: ארכיון חודשי
+        - name: categories
+          label: קטגוריות
+        - name: facebook
+          label: פייסבוק
+        - name: rss
+          label: RSS
+        - name: text
+          label: טקסט חופשי
+        - name: html
+          label: קוד HTML (למשל טופס הרשמה)
+    - name: title
+      label: כותרת
+      type: string
+    - name: count
+      label: כמה פוסטים (לפוסטים אחרונים)
+      type: number
+    - name: content
+      label: תוכן (לטקסט חופשי / קוד HTML)
+      type: code
+      options:
+        language: html
+  - name: top_posts
+    label: פוסטים ב"הנצפים ביותר"
+    type: string
+    list: true
+    description: כתובת של פוסט באתר, למשל /2016/05/06/ehrenreich-lands-is-young-han-solo/
+  - name: url
+    label: כתובת האתר
+    type: string
+    hidden: true
+  - name: language
+    type: string
+    hidden: true
+  - name: media_fallback
+    type: string
+    hidden: true
+settings:
+  commit:
+    identity: user
