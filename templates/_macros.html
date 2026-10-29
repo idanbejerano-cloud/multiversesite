@@ -1,8 +1,9 @@
 {% macro article(p, single=False, is_page=False, summary=False) %}
-<article id="post-{{ p.id }}" class="{{ 'page' if is_page else 'post' }} hentry{% if p.image %} has-post-thumbnail{% endif %}">
+{% set whole = contain_image(p) %}
+<article id="post-{{ p.id }}" class="{{ 'page' if is_page else 'post' }} hentry{% if p.image %} has-post-thumbnail{% endif %}{% if whole %} thumb-whole{% endif %}">
 {% if p.image %}
 {% if single %}
-<div class="post-thumbnail"><img width="1038" height="576" src="{{ media(p.image) }}" alt="" fetchpriority="high"></div>
+<div class="post-thumbnail"{% if whole %} style="--thumb-bg: url('{{ media(p.image) }}')"{% endif %}><img width="1038" height="576" src="{{ media(p.image) }}" alt="" fetchpriority="high"></div>
 {% else %}
 <a class="post-thumbnail" href="{{ u(p.url) }}" aria-hidden="true" tabindex="-1"><img width="1038" height="576" src="{{ media(p.image) }}" alt="" loading="lazy" decoding="async"></a>
 {% endif %}

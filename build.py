@@ -116,6 +116,37 @@ THUMB_SIZE = (480, 266)
 _thumb_cache = {}
 
 
+FRAME = 1038 / 576          # the theme's featured-image frame
+_ratio_cache = {}
+
+
+def image_file(p):
+    from urllib.parse import unquote
+    rel = unquote(p['image'][len('/wp-content/uploads/'):])
+    return os.path.join(UPLOADS_DIR, MEDIA_MAP.get(rel, rel))
+
+
+def contain_image(p):
+    """True when the post's image is too tall (or too wide) for the frame to be cropped nicely:
+    such images are shown whole on a blurred backdrop instead of being cut."""
+    if not p.get('image'):
+        return False
+    pid = p['id']
+    if pid not in _ratio_cache:
+        r = None
+        src = image_file(p)
+        if os.path.exists(src):
+            try:
+                from PIL import Image
+                with Image.open(src) as im:
+                    r = im.width / im.height
+            except Exception:  # noqa: BLE001
+                pass
+        _ratio_cache[pid] = r
+    r = _ratio_cache[pid]
+    return r is not None and abs(r / FRAME - 1) > 0.1
+
+
 def thumb(p):
     """Small cropped copy of a post's image for list pages (made once, kept in static/thumbs)."""
     if not p.get('image'):
@@ -123,18 +154,26 @@ def thumb(p):
     pid = p['id']
     if pid in _thumb_cache:
         return _thumb_cache[pid]
-    name = f'{pid}.webp'
+    whole = contain_image(p)
+    name = f'{pid}-w.webp' if whole else f'{pid}.webp'
     dst = os.path.join(THUMBS_DIR, name)
     if not os.path.exists(dst):
-        from urllib.parse import unquote
-        rel = unquote(p['image'][len('/wp-content/uploads/'):])
-        src = os.path.join(UPLOADS_DIR, MEDIA_MAP.get(rel, rel))
+        src = image_file(p)
         if os.path.exists(src):
             try:
-                from PIL import Image, ImageOps
+                from PIL import Image, ImageOps, ImageFilter, ImageEnhance
                 os.makedirs(THUMBS_DIR, exist_ok=True)
                 with Image.open(src) as im:
-                    ImageOps.fit(im.convert('RGB'), THUMB_SIZE, Image.LANCZOS).save(dst, 'WEBP', quality=72, method=4)
+                    im = im.convert('RGB')
+                    if whole:   # whole image on a blurred, darkened copy of itself
+                        bg = ImageOps.fit(im, THUMB_SIZE, Image.LANCZOS).filter(ImageFilter.GaussianBlur(14))
+                        bg = ImageEnhance.Brightness(bg).enhance(0.55)
+                        fg = im.copy()
+                        fg.thumbnail(THUMB_SIZE, Image.LANCZOS)
+                        bg.paste(fg, ((THUMB_SIZE[0] - fg.width) // 2, (THUMB_SIZE[1] - fg.height) // 2))
+                        bg.save(dst, 'WEBP', quality=74, method=4)
+                    else:
+                        ImageOps.fit(im, THUMB_SIZE, Image.LANCZOS).save(dst, 'WEBP', quality=72, method=4)
             except Exception as e:  # noqa: BLE001
                 print('thumb failed', src, e, file=sys.stderr)
     url = f'{BASE}/thumbs/{name}' if os.path.exists(dst) else media(p['image'])
@@ -225,7 +264,7 @@ def comments_for(pid):
 # ------------------------------------------------------------------ render
 env = Environment(loader=FileSystemLoader(os.path.join(ROOT, 'templates')),
                   autoescape=select_autoescape(['html', 'xml']), trim_blocks=True, lstrip_blocks=True)
-env.globals.update(u=u, media=media, summary_text=summary_text, thumb=thumb, heb_date=heb_date, cat_url=cat_url, tag_url=tag_url,
+env.globals.update(u=u, media=media, summary_text=summary_text, thumb=thumb, contain_image=contain_image, heb_date=heb_date, cat_url=cat_url, tag_url=tag_url,
                    author_url=author_url, CATS=CATS, TAGS=TAGS, AUTHORS=AUTHORS, cfg=CFG, BASE=BASE,
                    SITE_URL=SITE_URL)
 env.filters['body'] = lambda h: Markup(fix_body(h))

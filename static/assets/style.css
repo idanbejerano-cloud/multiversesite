@@ -134,3 +134,17 @@ h1,h2:not(.site-description),h3,h4,h5,h6,th,.entry-title{font-family:"Lato",sans
   .post-cards { padding: 0 30px; }
   .list-view .content-area { padding-top: 16px; }
 }
+
+/* featured images that would be badly cropped (posters, very wide stills) are shown whole */
+.thumb-whole .post-thumbnail { background: #111; overflow: hidden; position: relative; }
+.thumb-whole .post-thumbnail::before {
+  background: var(--thumb-bg) center / cover no-repeat; content: ""; filter: blur(28px) brightness(.5);
+  inset: -40px; position: absolute;
+}
+.thumb-whole .post-thumbnail img {
+  aspect-ratio: auto; height: auto; margin: 0 auto; max-height: 720px; object-fit: contain;
+  position: relative; width: auto; z-index: 1;
+}
+@media screen and (min-width: 673px) {
+  .site-content .hentry.thumb-whole .entry-header { margin-top: 0; }
+}
