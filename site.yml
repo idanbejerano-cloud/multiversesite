@@ -59,4 +59,4 @@ sidebar:
 - type: archives
   title: ארכיונים
 newsletter_form: https://f94b997c.sibforms.com/serve/MUIFALgOB1tlae61-bpUMJPNhmUyq8OgLEhzp_MA8q3e1eLXiONncrlV2m-lqpS6jw3RyhHSY-UX4iWBC_h-Q-KBa85iQGcNGPzamwqj8r2aOfqbBGnufJyg4522QlEhJ0eBRkKO_pYiBFfbY4Cd-9bc-7qh6NykbTKEKpbNozobRRiEifCUZhTsFsa5NOCS1bJIWabcCBga-_h6hA==
-comments_endpoint: ''
+comments_endpoint: https://multiverse-comments.multiversesite.workers.dev/
