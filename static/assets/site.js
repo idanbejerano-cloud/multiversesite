@@ -158,9 +158,10 @@
   });
   cancel.addEventListener('click', function (e) { e.preventDefault(); reset(); });
 
-  function say(msg, ok) {
+  function say(msg, ok, busy) {
     status.textContent = msg;
-    status.className = 'comment-status ' + (ok ? 'is-ok' : 'is-error');
+    status.className = 'comment-status ' + (busy ? 'is-busy' : ok ? 'is-ok' : 'is-error');
+    if (!busy && status.scrollIntoView) status.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -171,15 +172,17 @@
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { say('כתובת המייל לא תקינה.', false); form.email.focus(); return; }
     data.ts = opened;
     submit.disabled = true;
-    say('שולח…', true);
+    submit.value = 'שולח…';
+    say('שולח את התגובה…', true, true);
     fetch(form.getAttribute('data-endpoint'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
     }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .then(function (res) {
         submit.disabled = false;
+        submit.value = 'פרסום תגובה';
         if (res && res.ok) {
           form.text.value = '';
-          say('תודה! התגובה התקבלה ותופיע באתר אחרי אישור.', true);
+          say('✓ תודה! התגובה התקבלה ותופיע באתר אחרי אישור.', true);
         } else if (res && res.error === 'too_fast') {
           say('רגע, נסו לשלוח שוב בעוד כמה שניות.', false);
         } else if (res && res.error === 'links') {
@@ -188,6 +191,6 @@
           say('התגובה לא נשלחה. נסו שוב מאוחר יותר.', false);
         }
       })
-      .catch(function () { submit.disabled = false; say('התגובה לא נשלחה. בדקו את החיבור ונסו שוב.', false); });
+      .catch(function () { submit.disabled = false; submit.value = 'פרסום תגובה'; say('התגובה לא נשלחה. בדקו את החיבור ונסו שוב.', false); });
   });
 })();

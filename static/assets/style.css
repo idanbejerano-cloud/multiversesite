@@ -184,9 +184,11 @@ h1,h2:not(.site-description),h3,h4,h5,h6,th,.entry-title{font-family:"Lato",sans
 .comment-form label { display: block; font-weight: 700; margin-bottom: 4px; }
 .comment-form .required { color: #c00; }
 .comment-notes { color: #767676; font-size: 13px; }
-.comment-status { font-size: 14px; font-weight: 700; margin: 8px 0 0; min-height: 1.5em; }
-.comment-status.is-ok { color: #085229; }
-.comment-status.is-error { color: #a00; }
+.comment-status { font-size: 15px; font-weight: 700; margin: 12px 0 0; }
+.comment-status:empty { display: none; }
+.comment-status.is-busy { color: #555; }
+.comment-status.is-ok { color: #085229; background: #e6f4ea; border: 1px solid #9ccfac; border-radius: 4px; padding: 12px 14px; }
+.comment-status.is-error { color: #8a0000; background: #fdecec; border: 1px solid #e9a5a5; border-radius: 4px; padding: 12px 14px; }
 .comment-list .reply { font-size: 12px; font-weight: 700; margin: 0 0 24px; text-transform: uppercase; }
 #cancel-comment-reply-link[hidden] { display: none !important; }
 .comment-list .reply a { color: #044774; }
