@@ -175,3 +175,5 @@ h1,h2:not(.site-description),h3,h4,h5,h6,th,.entry-title{font-family:"Lato",sans
 .widget_newsletter .sib-form-message-panel { display: none; border: 1px solid; font-size: 13px; margin: 0 0 10px; max-width: none; padding: 8px; text-align: right; }
 .widget_newsletter #success-message { background: #e7faf0; border-color: #13ce66; color: #085229; }
 .widget_newsletter #error-message { background: #ffeded; border-color: #ff4949; color: #661d1d; }
+.widget_newsletter .sib-form, .widget_newsletter .newsletter-text { font-size: 13px; line-height: 1.5; }
+.widget_newsletter .entry__label.screen-reader-text { position: absolute !important; clip: rect(1px, 1px, 1px, 1px) !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
