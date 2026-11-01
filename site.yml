@@ -1,6 +1,6 @@
 # Site settings for build.py — also editable in Pages CMS ("הגדרות האתר").
 # menu items: title + either cat (category slug from data/categories.json) or link (/about/ or a full address)
-# sidebar widget types: top_posts, facebook, rss, recent, archives, categories, text, html
+# sidebar widget types: top_posts, newsletter, facebook, rss, recent, archives, categories, text, html
 title: מולטיוורס
 description: קומיקס, קולנוע, טלוויזיה וכל מה שחוצה עולמות
 url: https://multiversesite.com
@@ -46,6 +46,9 @@ top_posts:
 sidebar:
 - type: top_posts
   title: הרשומות והעמודים הנצפים ביותר
+- type: newsletter
+  title: ניוזלטר מהמולטיוורס
+  content: הירשמו וקבלו למייל כל פוסט חדש באתר.
 - type: facebook
   title: מולטיוורס בפייסבוק
 - type: rss
@@ -55,3 +58,4 @@ sidebar:
   count: 10
 - type: archives
   title: ארכיונים
+newsletter_form: https://f94b997c.sibforms.com/serve/MUIFALgOB1tlae61-bpUMJPNhmUyq8OgLEhzp_MA8q3e1eLXiONncrlV2m-lqpS6jw3RyhHSY-UX4iWBC_h-Q-KBa85iQGcNGPzamwqj8r2aOfqbBGnufJyg4522QlEhJ0eBRkKO_pYiBFfbY4Cd-9bc-7qh6NykbTKEKpbNozobRRiEifCUZhTsFsa5NOCS1bJIWabcCBga-_h6hA==

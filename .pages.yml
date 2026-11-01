@@ -247,6 +247,10 @@ content:
   - name: facebook
     label: כתובת עמוד הפייסבוק
     type: string
+  - name: newsletter_form
+    label: כתובת טופס ההרשמה ב-Brevo
+    type: string
+    description: הכתובת מתוך action="…" בקוד הטופס של Brevo. משמשת את הווידג'ט "הרשמה לניוזלטר".
   - name: per_page
     label: מספר פוסטים בכל עמוד ברשימות
     type: number
@@ -333,6 +337,8 @@ content:
         values:
         - name: top_posts
           label: הנצפים ביותר (תמונות)
+        - name: newsletter
+          label: הרשמה לניוזלטר (Brevo)
         - name: recent
           label: פוסטים אחרונים
         - name: archives
@@ -354,7 +360,7 @@ content:
       label: כמה פוסטים (לפוסטים אחרונים)
       type: number
     - name: content
-      label: תוכן (לטקסט חופשי / קוד HTML)
+      label: תוכן (טקסט חופשי / קוד HTML / משפט מתחת לכותרת הניוזלטר)
       type: code
       options:
         language: html

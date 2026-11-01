@@ -148,3 +148,30 @@ h1,h2:not(.site-description),h3,h4,h5,h6,th,.entry-title{font-family:"Lato",sans
 @media screen and (min-width: 673px) {
   .site-content .hentry.thumb-whole .entry-header { margin-top: 0; }
 }
+
+/* newsletter sign-up (Brevo) in the sidebar */
+.widget_newsletter .sib-form { background: none; padding: 0; text-align: right; font-family: inherit; }
+.widget_newsletter .sib-form-container, .widget_newsletter #sib-container {
+  background: none !important; border: 0 !important; max-width: none !important; padding: 0 !important; direction: rtl; text-align: right;
+}
+.widget_newsletter #sib-form { display: block; }
+.widget_newsletter .sib-form-block, .widget_newsletter .sib-input { padding: 0 !important; margin: 0 0 8px; }
+.widget_newsletter .newsletter-text { color: #113363; margin: 0 0 10px; }
+.widget_newsletter .entry__field { border: 1px solid #9fc1ee; border-radius: 0; background: #fff; margin: 0; }
+.widget_newsletter .entry__field:focus-within { border-color: #044774; box-shadow: none; }
+.widget_newsletter .input { background: #fff !important; border: 0 !important; color: #2b2b2b; font: inherit; font-size: 14px;
+  padding: 8px !important; width: 100%; box-sizing: border-box; text-align: left; }
+.widget_newsletter .input::placeholder { color: #8a9bb5; text-align: right; direction: rtl; }
+.widget_newsletter .sib-form-block__button {
+  background-color: #044774 !important; border: 0; border-radius: 0; color: #fff !important; cursor: pointer; display: block;
+  font: inherit; font-size: 13px; font-weight: 700; padding: 8px 12px; text-align: center; width: 100%;
+}
+.widget_newsletter .sib-form-block__button:hover { background-color: #093d69 !important; }
+.widget_newsletter .sib-form-block__button svg { fill: #fff; height: 14px; margin-left: 6px; vertical-align: -2px; width: 14px; }
+.widget_newsletter .sib-hide-loader-icon { display: none; }
+.widget_newsletter .entry__error { color: #a00; font-size: 12px; margin-top: 4px; display: block; }
+.widget_newsletter .entry__error:empty { display: none; }
+.widget_newsletter .input--hidden { display: none !important; }
+.widget_newsletter .sib-form-message-panel { display: none; border: 1px solid; font-size: 13px; margin: 0 0 10px; max-width: none; padding: 8px; text-align: right; }
+.widget_newsletter #success-message { background: #e7faf0; border-color: #13ce66; color: #085229; }
+.widget_newsletter #error-message { background: #ffeded; border-color: #ff4949; color: #661d1d; }
