@@ -304,11 +304,33 @@ def load_items(kind):
     return items
 
 
+NEW_COMMENTS = defaultdict(list)   # post id -> approved comments sent through the site's form
+_new_dir = os.path.join(ROOT, 'content', 'comments', 'new')
+if os.path.isdir(_new_dir):
+    for _fn in sorted(os.listdir(_new_dir)):
+        if not _fn.endswith(('.yml', '.yaml')):
+            continue
+        try:
+            _c = yaml.safe_load(open(os.path.join(_new_dir, _fn), encoding='utf-8')) or {}
+        except Exception as e:  # noqa: BLE001
+            print('bad comment file', _fn, e, file=sys.stderr)
+            continue
+        if not _c.get('approved') or not _c.get('post_id') or not str(_c.get('text') or '').strip():
+            continue
+        _paras = [p.strip() for p in re.split(r'\n\s*\n', str(_c['text']).strip()) if p.strip()]
+        _html = ''.join('<p>' + re.sub(r'(https?://[^\s<]+)', r'<a href="\1" rel="nofollow ugc noopener" target="_blank">\1</a>',
+                                       html.escape(p)).replace('\n', '<br>\n') + '</p>' for p in _paras)
+        NEW_COMMENTS[int(_c['post_id'])].append({
+            'id': int(_c.get('id') or 0), 'parent': int(_c.get('parent') or 0), 'author': str(_c.get('author') or 'אנונימי'),
+            'url': '', 'date': str(_c.get('date') or '')[:19].replace('T', ' '), 'html': _html})
+
+
 def comments_for(pid):
     path = os.path.join(ROOT, 'content', 'comments', f'{pid}.json')
-    if not os.path.exists(path):
+    flat = json.load(open(path, encoding='utf-8')) if os.path.exists(path) else []
+    flat = flat + [dict(c) for c in NEW_COMMENTS.get(pid, [])]
+    if not flat:
         return []
-    flat = json.load(open(path, encoding='utf-8'))
     by_parent = defaultdict(list)
     ids = {c['id'] for c in flat}
     for c in flat:
@@ -400,6 +422,8 @@ def main():
     os.makedirs(OUT)
 
     posts = sorted(load_items('posts'), key=lambda p: (p['dt'], p['id']), reverse=True)
+    for p in posts:
+        p['comments'] = int(p.get('comments') or 0) + len(NEW_COMMENTS.get(p['id'], []))
     pages = load_items('pages')
     by_url = {p['url']: p for p in posts + pages}
 

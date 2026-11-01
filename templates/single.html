@@ -24,19 +24,36 @@
 <ol class="comment-list">
 {% for c in comments recursive %}
 <li id="comment-{{ c.id }}" class="comment{% if c.children %} parent{% endif %}">
-<article class="comment-body">
+<article id="div-comment-{{ c.id }}" class="comment-body">
 <footer class="comment-meta">
 <div class="comment-author vcard"><span class="avatar"></span><b class="fn">{% if c.url %}<a href="{{ c.url }}" rel="external nofollow ugc" class="url">{{ c.author }}</a>{% else %}{{ c.author }}{% endif %}</b> <span class="says">הגיב:</span></div>
 <div class="comment-metadata"><a href="#comment-{{ c.id }}"><time datetime="{{ c.dt.isoformat() }}">{{ heb_date(c.dt) }} בשעה {{ c.dt.strftime('%H:%M') }}</time></a></div>
 </footer>
 <div class="comment-content">{{ c.html }}</div>
+{% if cfg.comments_endpoint %}<div class="reply"><a class="comment-reply-link" href="#respond" data-commentid="{{ c.id }}" data-author="{{ c.author }}">להגיב</a></div>{% endif %}
 </article>
 {% if c.children %}<ol class="children">{{ loop(c.children) }}</ol>{% endif %}
 </li>
 {% endfor %}
 </ol>
 {% endif %}
+{% if cfg.comments_endpoint %}
+<div id="respond" class="comment-respond">
+<h3 id="reply-title" class="comment-reply-title">כתיבת תגובה <small><a rel="nofollow" id="cancel-comment-reply-link" href="#respond" hidden>ביטול תגובה</a></small></h3>
+<form id="commentform" class="comment-form" data-endpoint="{{ cfg.comments_endpoint }}" novalidate>
+<p class="comment-notes">התגובה תתפרסם אחרי אישור. כתובת המייל לא תוצג באתר.</p>
+<p class="comment-form-comment"><label for="comment">תגובה <span class="required">*</span></label><textarea id="comment" name="text" cols="45" rows="6" maxlength="5000" required></textarea></p>
+<p class="comment-form-author"><label for="author">שם <span class="required">*</span></label><input id="author" name="author" type="text" maxlength="80" autocomplete="name" required></p>
+<p class="comment-form-email"><label for="email">אימייל (לא חובה)</label><input id="email" name="email" type="email" maxlength="120" autocomplete="email" dir="ltr"></p>
+<p class="comment-form-website" aria-hidden="true" style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap"><label for="cf-website">אתר</label><input id="cf-website" name="website" type="text" tabindex="-1" autocomplete="off"></p>
+<input type="hidden" name="post_id" value="{{ post.id }}"><input type="hidden" name="post_url" value="{{ post.url }}"><input type="hidden" name="post_title" value="{{ post.title }}"><input type="hidden" name="parent" id="comment_parent" value="0">
+<p class="form-submit"><input name="submit" type="submit" id="submit" class="submit" value="פרסום תגובה"></p>
+<p class="comment-status" role="status" aria-live="polite"></p>
+</form>
+</div>
+{% else %}
 <p class="no-comments">התגובות סגורות.</p>
+{% endif %}
 </div>
 {% endif %}
 {% endblock %}

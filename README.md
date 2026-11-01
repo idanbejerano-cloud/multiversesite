@@ -21,6 +21,15 @@
 עורכים נוספים: מזמינים אותם במייל מתוך Pages CMS (לא צריך חשבון GitHub).
 ההגדרות של הממשק נמצאות בקובץ `.pages.yml`.
 
+## תגובות של קוראים
+- הטופס בתחתית כל פוסט שולח את התגובה לשירות קטן ב-Cloudflare Workers (`worker/`), שכותב אותה כקובץ
+  ל-`content/comments/new/` עם `approved: false` (ואם הוגדר – שולח מייל התראה דרך Brevo).
+- מאשרים ב-Pages CMS: "תגובות" ← התגובה ← מסמנים "מאושר – להציג באתר" ← שמירה. רק תגובות מאושרות מוצגות.
+  תגובה לא רצויה פשוט מוחקים.
+- הטופס מוצג רק כש-`comments_endpoint` ב-`site.yml` מכיל את כתובת השירות.
+- הפריסה של השירות: `.github/workflows/comments-worker.yml`, לפי הסודות במאגר
+  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `COMMENTS_GITHUB_TOKEN`, ולהתראות במייל `BREVO_API_KEY`, `NOTIFY_EMAIL`.
+
 ## הוספת פוסט ידנית (בלי הממשק)
 יוצרים קובץ חדש ב-`content/posts/<שנה>/`, למשל `content/posts/2026/2026-11-01-900001.html`:
 

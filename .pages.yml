@@ -226,6 +226,65 @@ content:
     type: string
     list: true
     hidden: true
+- name: comments
+  label: תגובות
+  type: collection
+  path: content/comments/new
+  format: yaml
+  view:
+    fields:
+    - author
+    - post_title
+    - approved
+    - date
+    primary: author
+    sort:
+    - date
+    search:
+    - author
+    - text
+    - post_title
+    default:
+      sort: date
+      order: desc
+  operations:
+    create: false
+    rename: false
+  fields:
+  - name: approved
+    label: מאושר – להציג באתר
+    type: boolean
+  - name: author
+    label: שם
+    type: string
+  - name: text
+    label: תגובה
+    type: text
+  - name: post_title
+    label: פוסט
+    type: string
+    readonly: true
+  - name: post_url
+    label: כתובת הפוסט
+    type: string
+    readonly: true
+  - name: date
+    label: תאריך
+    type: string
+    readonly: true
+  - name: email
+    label: אימייל (לא מוצג באתר)
+    type: string
+    readonly: true
+  - name: id
+    type: number
+    hidden: true
+  - name: post_id
+    type: number
+    hidden: true
+  - name: parent
+    type: number
+    hidden: true
 - name: settings
   label: הגדרות האתר
   type: file
@@ -251,6 +310,10 @@ content:
     label: כתובת טופס ההרשמה ב-Brevo
     type: string
     description: הכתובת מתוך action="…" בקוד הטופס של Brevo. משמשת את הווידג'ט "הרשמה לניוזלטר".
+  - name: comments_endpoint
+    label: כתובת שירות התגובות
+    type: string
+    description: כתובת ה-Worker ב-Cloudflare. אם ריק – טופס התגובות לא מוצג.
   - name: per_page
     label: מספר פוסטים בכל עמוד ברשימות
     type: number

@@ -57,5 +57,7 @@ accept, invite or change anything there.**
 2. `python3 build.py` to make sure the site still builds (it should print "Built …").
 3. `git add -A && git commit -m "Add <n> posts from the Facebook group"` (include the
    attribution lines the session asks for), then `git push`. GitHub rebuilds the site automatically.
+   Readers' comments are also committed to `main` by the comments service, so if the push is
+   rejected because the remote has new commits, run `git pull --rebase` and push again.
 4. Report in one or two lines: titles and addresses of the posts added, and what was skipped and why.
    If nothing new was found, say so briefly.

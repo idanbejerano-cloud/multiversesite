@@ -124,3 +124,70 @@
     results.innerHTML = '<p>החיפוש לא זמין כרגע.</p>';
   });
 })();
+
+// ---- comment form (posts): reply links, send to the comments service, show the result
+(function () {
+  'use strict';
+  var form = document.getElementById('commentform');
+  if (!form) return;
+  var respond = document.getElementById('respond');
+  var home = respond.parentNode, homeNext = respond.nextSibling;
+  var parentInput = document.getElementById('comment_parent');
+  var cancel = document.getElementById('cancel-comment-reply-link');
+  var title = document.getElementById('reply-title');
+  var titleText = title.firstChild;
+  var status = form.querySelector('.comment-status');
+  var submit = form.querySelector('.submit');
+  var opened = Date.now();
+
+  function reset() {
+    parentInput.value = '0';
+    titleText.nodeValue = 'כתיבת תגובה ';
+    cancel.hidden = true;
+    home.insertBefore(respond, homeNext);
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('.comment-reply-link');
+    if (!a) return;
+    e.preventDefault();
+    parentInput.value = a.getAttribute('data-commentid');
+    titleText.nodeValue = 'תגובה ל' + a.getAttribute('data-author') + ' ';
+    cancel.hidden = false;
+    a.closest('.comment-body').after(respond);
+    form.querySelector('textarea').focus();
+  });
+  cancel.addEventListener('click', function (e) { e.preventDefault(); reset(); });
+
+  function say(msg, ok) {
+    status.textContent = msg;
+    status.className = 'comment-status ' + (ok ? 'is-ok' : 'is-error');
+  }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = {};
+    new FormData(form).forEach(function (v, k) { data[k] = v; });
+    if ((data.author || '').trim().length < 2) { say('נא לכתוב שם.', false); form.author.focus(); return; }
+    if ((data.text || '').trim().length < 2) { say('נא לכתוב תגובה.', false); form.text.focus(); return; }
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { say('כתובת המייל לא תקינה.', false); form.email.focus(); return; }
+    data.ts = opened;
+    submit.disabled = true;
+    say('שולח…', true);
+    fetch(form.getAttribute('data-endpoint'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+      .then(function (res) {
+        submit.disabled = false;
+        if (res && res.ok) {
+          form.text.value = '';
+          say('תודה! התגובה התקבלה ותופיע באתר אחרי אישור.', true);
+        } else if (res && res.error === 'too_fast') {
+          say('רגע, נסו לשלוח שוב בעוד כמה שניות.', false);
+        } else if (res && res.error === 'links') {
+          say('יש בתגובה יותר מדי קישורים.', false);
+        } else {
+          say('התגובה לא נשלחה. נסו שוב מאוחר יותר.', false);
+        }
+      })
+      .catch(function () { submit.disabled = false; say('התגובה לא נשלחה. בדקו את החיבור ונסו שוב.', false); });
+  });
+})();

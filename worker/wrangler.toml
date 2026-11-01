@@ -1,0 +1,15 @@
+# Comments service for multiversesite.com (Cloudflare Workers, free plan).
+# Receives a comment from the form under each post and saves it to the GitHub
+# repository as a file waiting for approval (content/comments/new/*.yml).
+# Deployed automatically by .github/workflows/comments-worker.yml.
+name = "multiverse-comments"
+main = "src/index.js"
+compatibility_date = "2026-01-15"
+workers_dev = true
+
+[vars]
+REPO = "idanbejerano-cloud/multiversesite"
+BRANCH = "main"
+ALLOWED_ORIGINS = "https://multiversesite.com,https://www.multiversesite.com,http://127.0.0.1:8765"
+NOTIFY_FROM = "news@multiversesite.com"
+SITE_URL = "https://multiversesite.com"
