@@ -2,22 +2,24 @@
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
 <title>{{ cfg.title }}</title>
-<atom:link href="{{ SITE_URL }}/feed/" rel="self" type="application/rss+xml"/>
+<atom:link href="{{ SITE_URL }}/feed.xml" rel="self" type="application/rss+xml"/>
 <link>{{ SITE_URL }}/</link>
 <description>{{ cfg.description }}</description>
 <lastBuildDate>{{ now.strftime('%a, %d %b %Y %H:%M:%S +0000') }}</lastBuildDate>
 <language>he-IL</language>
-{% for p in posts %}
+{% for it in items %}{% set p = it.p %}
 <item>
 <title>{{ p.title }}</title>
-<link>{{ SITE_URL }}{{ p.url }}</link>
+<link>{{ it.link }}</link>
 <dc:creator>{{ AUTHORS.get(p.author, p.author) }}</dc:creator>
-<pubDate>{{ p.dt.strftime('%a, %d %b %Y %H:%M:%S +0200') }}</pubDate>
+<pubDate>{{ it.date }}</pubDate>
 {% for c in p.categories %}<category>{{ CATS[c].name if c in CATS else c }}</category>
 {% endfor %}
-<guid isPermaLink="true">{{ SITE_URL }}{{ p.url }}</guid>
-<description>{{ p.excerpt or '' }}</description>
-<content:encoded><![CDATA[{% if p.image %}<p><img src="{{ absolute('<img src="' ~ p.image ~ '">')[10:-2] }}" alt=""></p>{% endif %}{{ absolute(p.teaser) | safe }}{% if p.has_more %}{{ absolute(p.rest) | safe }}{% endif %}]]></content:encoded>
+<guid isPermaLink="true">{{ it.link }}</guid>
+{% if it.enc %}<enclosure url="{{ it.enc.url }}" length="{{ it.enc.length }}" type="image/jpeg"/>
+{% endif %}
+<description>{{ it.summary }}</description>
+<content:encoded><![CDATA[{% if it.enc %}<p><img src="{{ it.enc.url }}" alt="" style="max-width:100%;height:auto"></p>{% endif %}{{ absolute(p.teaser) | safe }}{% if p.has_more %}{{ absolute(p.rest) | safe }}{% endif %}]]></content:encoded>
 </item>
 {% endfor %}
 </channel>

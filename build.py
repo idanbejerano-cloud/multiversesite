@@ -526,7 +526,32 @@ def main():
         write(src if src.endswith('/') else src + '/', redir.render(target=u(dst)))
 
     # feed + sitemap + robots
-    feed = env.get_template('feed.xml').render(posts=posts[:20], absolute=absolute, now=dt.datetime.now(dt.timezone.utc))
+    # email-friendly feed: a JPEG copy of each featured image (enclosure) and a plain-text summary
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo('Asia/Jerusalem')
+    feed_dir = os.path.join(OUT, 'assets', 'feed')
+    os.makedirs(feed_dir, exist_ok=True)
+    feed_items = []
+    for p in posts[:20]:
+        enc = None
+        if p.get('image') and os.path.exists(image_file(p)):
+            try:
+                from PIL import Image
+                with Image.open(image_file(p)) as im:
+                    im = im.convert('RGB')
+                    if im.width > 600:
+                        im = im.resize((600, round(im.height * 600 / im.width)), Image.LANCZOS)
+                    dst = os.path.join(feed_dir, f'{p["id"]}.jpg')
+                    im.save(dst, 'JPEG', quality=82, optimize=True, progressive=True)
+                enc = {'url': f'{SITE_ORIGIN}{BASE}/assets/feed/{p["id"]}.jpg', 'length': os.path.getsize(dst)}
+            except Exception as e:  # noqa: BLE001
+                print('feed image failed', p['id'], e, file=sys.stderr)
+        words = (p.get('excerpt') or strip_tags(p['teaser'] or p['rest'])).split()
+        summary = ' '.join(words[:45]) + ('…' if len(words) > 45 else '')
+        feed_items.append({'p': p, 'enc': enc, 'summary': summary,
+                           'link': SITE_URL + quote(p['url']),
+                           'date': p['dt'].replace(tzinfo=tz).strftime('%a, %d %b %Y %H:%M:%S %z')})
+    feed = env.get_template('feed.xml').render(items=feed_items, absolute=absolute, now=dt.datetime.now(dt.timezone.utc))
     write('/feed/', feed)
     write('/feed.xml', feed)
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
