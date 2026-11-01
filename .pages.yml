@@ -230,6 +230,7 @@ content:
   label: תגובות
   type: collection
   path: content/comments/new
+  filename: '{year}-{month}-{day}-{primary}.yml'
   format: yaml
   view:
     fields:
