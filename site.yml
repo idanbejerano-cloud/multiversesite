@@ -27,11 +27,6 @@ menu:
   - cat: ביקורות-טלוויזיה
   - cat: טריילרים
 - cat: multi-pass
-- cat: shaninigans
-- cat: geekout
-  children:
-  - title: גיקאאוט – כל מה שגיק!
-    link: /geekout/
 - title: אודות
   link: /about/
 top_posts:
