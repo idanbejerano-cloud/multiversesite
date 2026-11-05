@@ -119,6 +119,13 @@ def summary_text(p):
 THUMBS_DIR = os.path.join(ROOT, 'static', 'thumbs')
 THUMB_SIZE = (480, 266)
 _thumb_cache = {}
+# which image each saved thumbnail was made from, so a changed featured image gets a new thumbnail
+THUMB_SOURCES_PATH = os.path.join(ROOT, 'data', 'thumb_sources.json')
+try:
+    THUMB_SOURCES = json.load(open(THUMB_SOURCES_PATH, encoding='utf-8'))
+except (OSError, ValueError):
+    THUMB_SOURCES = {}
+_thumb_sources_before = dict(THUMB_SOURCES)
 
 
 FRAME = 1038 / 576          # the theme's featured-image frame
@@ -162,6 +169,9 @@ def thumb(p):
     whole = contain_image(p)
     name = f'{pid}-w.webp' if whole else f'{pid}.webp'
     dst = os.path.join(THUMBS_DIR, name)
+    made_from = THUMB_SOURCES.get(name)
+    if os.path.exists(dst) and made_from is not None and made_from != p['image']:
+        os.remove(dst)          # the post's image was changed since this thumbnail was made
     if not os.path.exists(dst):
         src = image_file(p)
         if os.path.exists(src):
@@ -181,6 +191,8 @@ def thumb(p):
                         ImageOps.fit(im, THUMB_SIZE, Image.LANCZOS).save(dst, 'WEBP', quality=72, method=4)
             except Exception as e:  # noqa: BLE001
                 print('thumb failed', src, e, file=sys.stderr)
+    if os.path.exists(dst):
+        THUMB_SOURCES[name] = p['image']
     url = f'{BASE}/thumbs/{name}' if os.path.exists(dst) else media(p['image'])
     _thumb_cache[pid] = url
     return url
@@ -604,6 +616,9 @@ def main():
             except OSError:
                 shutil.copy2(s, d)
 
+    if THUMB_SOURCES != _thumb_sources_before:
+        with open(THUMB_SOURCES_PATH, 'w', encoding='utf-8') as f:
+            json.dump(THUMB_SOURCES, f, ensure_ascii=False, indent=0, sort_keys=True)
     print(f'Built {written} pages, {len(posts)} posts, {len(pages)} pages in '
           f'{(dt.datetime.now() - t0).total_seconds():.1f}s; images loaded from old server: {len(missing_media)}')
 
