@@ -1,58 +1,58 @@
-# Site settings for build.py — also editable in Pages CMS ("הגדרות האתר").
-# menu items: title + either cat (category slug from data/categories.json) or link (/about/ or a full address)
-# sidebar widget types: top_posts, newsletter, facebook, rss, recent, archives, categories, text, html
 title: מולטיוורס
 description: קומיקס, קולנוע, טלוויזיה וכל מה שחוצה עולמות
-url: https://multiversesite.com
-language: he
 header_image: /wp-content/uploads/2019/03/multiverse-site-header.jpg
 facebook: https://www.facebook.com/multiversesite
-per_page: 20
-media_fallback: ''
-menu:
-- title: דף הבית
-  link: /
-- cat: קולנוע
-  children:
-  - cat: חדשות-קולנוע
-  - cat: ביקורות-קולנוע
-  - cat: טריילרים
-- cat: קומיקס
-  children:
-  - cat: חדשות-קומיקס
-  - cat: ביקורות-קומיקס
-- cat: טלוויזיה
-  children:
-  - cat: חדשות-טלוויזיה
-  - cat: ביקורות-טלוויזיה
-  - cat: טריילרים
-- cat: multi-pass
-- title: אודות
-  link: /about/
-top_posts:
-- /2016/05/06/ehrenreich-lands-is-young-han-solo/
-- /2017/09/30/electric-dreams-episode-1-and-2-review/
-- /2015/10/17/flash-review-2x02-flash-of-two-worlds/
-- /2015/02/21/tv-news-compilation-21-02-2015/
-- /2015/03/02/fight-club-2-is-coming-to-comics-this-may/
-- /2015/06/21/miles-morales-spider-man-new-series/
-- /2017/08/31/comico-europe-dates-and-places/
-- /2019/11/02/jumanji-2-trailer-2/
-sidebar:
-- type: top_posts
-  title: הרשומות והעמודים הנצפים ביותר
-- type: newsletter
-  title: ניוזלטר מהמולטיוורס
-  content: הירשמו וקבלו למייל כל פוסט חדש באתר.
-- type: facebook
-  title: מולטיוורס בפייסבוק
-- type: rss
-  title: RSS
-- type: recent
-  title: פוסטים אחרונים
-  count: 10
-- type: archives
-  title: ארכיונים
 newsletter_form: https://f94b997c.sibforms.com/serve/MUIFALgOB1tlae61-bpUMJPNhmUyq8OgLEhzp_MA8q3e1eLXiONncrlV2m-lqpS6jw3RyhHSY-UX4iWBC_h-Q-KBa85iQGcNGPzamwqj8r2aOfqbBGnufJyg4522QlEhJ0eBRkKO_pYiBFfbY4Cd-9bc-7qh6NykbTKEKpbNozobRRiEifCUZhTsFsa5NOCS1bJIWabcCBga-_h6hA==
 comments_endpoint: https://multiverse-comments.multiversesite.workers.dev/
-cloudflare_analytics: ''
+cloudflare_analytics: "<!-- Cloudflare Web Analytics --><script type='module'
+  src='https://static.cloudflareinsights.com/beacon.min.js'
+  data-cf-beacon='{\"token\":
+  \"bb8ab2e9486b4c889f3c878cb1871e10\"}'></script><!-- End Cloudflare Web
+  Analytics -->"
+per_page: 20
+menu:
+  - title: דף הבית
+    link: /
+  - cat: קולנוע
+    children:
+      - cat: חדשות-קולנוע
+      - cat: ביקורות-קולנוע
+      - cat: טריילרים
+  - cat: קומיקס
+    children:
+      - cat: חדשות-קומיקס
+      - cat: ביקורות-קומיקס
+  - cat: טלוויזיה
+    children:
+      - cat: חדשות-טלוויזיה
+      - cat: ביקורות-טלוויזיה
+      - cat: טריילרים
+  - cat: multi-pass
+  - title: אודות
+    link: /about/
+sidebar:
+  - type: top_posts
+    title: הרשומות והעמודים הנצפים ביותר
+  - type: newsletter
+    title: ניוזלטר מהמולטיוורס
+    content: הירשמו וקבלו למייל כל פוסט חדש באתר.
+  - type: facebook
+    title: מולטיוורס בפייסבוק
+  - type: rss
+    title: RSS
+  - type: recent
+    title: פוסטים אחרונים
+    count: 10
+  - type: archives
+    title: ארכיונים
+top_posts:
+  - /2016/05/06/ehrenreich-lands-is-young-han-solo/
+  - /2017/09/30/electric-dreams-episode-1-and-2-review/
+  - /2015/10/17/flash-review-2x02-flash-of-two-worlds/
+  - /2015/02/21/tv-news-compilation-21-02-2015/
+  - /2015/03/02/fight-club-2-is-coming-to-comics-this-may/
+  - /2015/06/21/miles-morales-spider-man-new-series/
+  - /2017/08/31/comico-europe-dates-and-places/
+  - /2019/11/02/jumanji-2-trailer-2/
+url: https://multiversesite.com
+language: he
