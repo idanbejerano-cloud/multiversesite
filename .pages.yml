@@ -315,6 +315,10 @@ content:
     label: כתובת שירות התגובות
     type: string
     description: כתובת ה-Worker ב-Cloudflare. אם ריק – טופס התגובות לא מוצג.
+  - name: cloudflare_analytics
+    label: סטטיסטיקות (Cloudflare Web Analytics)
+    type: string
+    description: מדביקים כאן את הקוד מ-Cloudflare ← Web Analytics ← Manage site (או רק את ה-token שבתוכו). אם ריק – אין מדידת כניסות.
   - name: per_page
     label: מספר פוסטים בכל עמוד ברשימות
     type: number

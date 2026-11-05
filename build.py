@@ -31,6 +31,10 @@ CFG = yaml.safe_load(open(os.path.join(ROOT, 'site.yml'), encoding='utf-8'))
 BASE = os.environ.get('BASE_PATH', '').rstrip('/')
 SITE_URL = (os.environ.get('SITE_URL') or (CFG['url'].rstrip('/') + BASE)).rstrip('/')
 PER_PAGE = int(CFG.get('per_page', 20))
+# Cloudflare Web Analytics: the setting may hold the site token or the whole snippet Cloudflare gives
+_cfa = str(CFG.get('cloudflare_analytics') or '').strip()
+_m = re.search(r'["\']token["\']\s*:\s*["\']([A-Za-z0-9]+)', _cfa)
+CFG['cf_beacon_token'] = _m.group(1) if _m else (_cfa if re.fullmatch(r'[A-Za-z0-9]{16,64}', _cfa) else '')
 FALLBACK = CFG.get('media_fallback') or ''
 HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר',
               'נובמבר', 'דצמבר']
