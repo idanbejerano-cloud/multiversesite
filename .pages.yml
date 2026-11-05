@@ -315,6 +315,10 @@ content:
     label: כתובת שירות התגובות
     type: string
     description: כתובת ה-Worker ב-Cloudflare. אם ריק – טופס התגובות לא מוצג.
+  - name: goatcounter
+    label: סטטיסטיקות עם כותרות (GoatCounter)
+    type: string
+    description: הקוד מ-GoatCounter (למשל multiversesite), כתובת הלוח שלכם ב-goatcounter.com או קטע הקוד שהם נותנים. אם ריק – לא נמדד.
   - name: cloudflare_analytics
     label: סטטיסטיקות (Cloudflare Web Analytics)
     type: string

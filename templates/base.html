@@ -82,6 +82,7 @@ window.translation = {common: {selectedList: '{quantity}', selectedLists: '{quan
 {% if 'twitter' in embeds %}<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>{% endif %}
 {% if 'instagram' in embeds %}<script async src="https://www.instagram.com/embed.js"></script>{% endif %}
 {% if 'facebook' in embeds %}<div id="fb-root"></div><script async defer crossorigin="anonymous" src="https://connect.facebook.net/he_IL/sdk.js#xfbml=1&amp;version=v19.0"></script>{% endif %}
-{% if cfg.cf_beacon_token %}<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ cfg.cf_beacon_token }}"}'></script>{% endif %}
+{% if cfg.goatcounter_code %}<script data-goatcounter="https://{{ cfg.goatcounter_code }}.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+{% endif %}{% if cfg.cf_beacon_token %}<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ cfg.cf_beacon_token }}"}'></script>{% endif %}
 </body>
 </html>

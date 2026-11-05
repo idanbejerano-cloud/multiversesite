@@ -35,6 +35,10 @@ PER_PAGE = int(CFG.get('per_page', 20))
 _cfa = str(CFG.get('cloudflare_analytics') or '').strip()
 _m = re.search(r'["\']token["\']\s*:\s*["\']([A-Za-z0-9]+)', _cfa)
 CFG['cf_beacon_token'] = _m.group(1) if _m else (_cfa if re.fullmatch(r'[A-Za-z0-9]{16,64}', _cfa) else '')
+# GoatCounter: the setting may hold the snippet, the count URL, the dashboard URL or just the site code
+_gc = str(CFG.get('goatcounter') or '').strip().lower()
+_m = re.search(r'([a-z0-9][a-z0-9-]*)\.goatcounter\.com', _gc)
+CFG['goatcounter_code'] = _m.group(1) if _m else (_gc if re.fullmatch(r'[a-z0-9][a-z0-9-]{1,49}', _gc) else '')
 FALLBACK = CFG.get('media_fallback') or ''
 HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר',
               'נובמבר', 'דצמבר']
