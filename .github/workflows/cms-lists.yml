@@ -1,0 +1,40 @@
+# When the writers or categories are edited in Pages CMS ("כותבים", "קטגוריות"),
+# update the choices offered in the post form (.pages.yml) – tools/update_cms_lists.py.
+name: Update writer and category choices
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - data/authors.yml
+      - data/categories.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cms-lists
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update the choices
+        run: |
+          pip install -q pyyaml
+          python3 tools/update_cms_lists.py
+
+      - name: Save
+        run: |
+          if git diff --quiet; then echo "Nothing to change."; exit 0; fi
+          git config user.name "Pages CMS lists"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -am "Writer and category choices updated from data/authors.yml and data/categories.yml"
+          for i in 1 2 3; do
+            git push origin HEAD:main && break
+            git pull -q --rebase origin main
+          done

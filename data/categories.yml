@@ -1,0 +1,65 @@
+categories:
+- name: קולנוע
+  slug: קולנוע
+  parent: ''
+  active: true
+- name: ביקורות קולנוע
+  slug: ביקורות-קולנוע
+  parent: קולנוע
+  active: true
+- name: חדשות קולנוע
+  slug: חדשות-קולנוע
+  parent: קולנוע
+  active: true
+- name: טלוויזיה
+  slug: טלוויזיה
+  parent: ''
+  active: true
+- name: ביקורות טלוויזיה
+  slug: ביקורות-טלוויזיה
+  parent: טלוויזיה
+  active: true
+- name: חדשות טלוויזיה
+  slug: חדשות-טלוויזיה
+  parent: טלוויזיה
+  active: true
+- name: קומיקס
+  slug: קומיקס
+  parent: ''
+  active: true
+- name: ביקורות קומיקס
+  slug: ביקורות-קומיקס
+  parent: קומיקס
+  active: true
+- name: חדשות קומיקס
+  slug: חדשות-קומיקס
+  parent: קומיקס
+  active: true
+- name: טריילרים
+  slug: טריילרים
+  parent: ''
+  active: true
+- name: כללי
+  slug: כללי
+  parent: ''
+  active: true
+- name: Geekout
+  slug: geekout
+  parent: ''
+  active: true
+- name: Multi-Pass
+  slug: multi-pass
+  parent: ''
+  active: true
+- name: Shaninigans
+  slug: shaninigans
+  parent: ''
+  active: true
+- name: בחזרה לעבר
+  slug: בחזרה-לעבר
+  parent: ''
+  active: true
+- name: מפה משם ומכל מקום שבעולם
+  slug: מפה-משם-ומכל-מקום-שבעולם
+  parent: ''
+  active: true

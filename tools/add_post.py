@@ -13,7 +13,7 @@ post.json:
   "title": "optional title",             # default: first line of the text
   "text": "the post text, as plain text (line breaks kept)",
   "images": ["/path/to/img1.jpg", ...],  # local files, optional
-  "categories": ["ביקורות-קולנוע"],      # optional, slugs from data/categories.json
+  "categories": ["ביקורות-קולנוע"],      # optional, slugs from data/categories.yml
   "force": true                          # optional: import even if older than after_id
 }
 
@@ -110,12 +110,14 @@ def main(path):
         print('SKIP author not on the list:', post.get('author'))
         return
     login = person.get('site_author') or re.sub(r'[^a-z0-9]', '', fb_id)[:12]
-    authors_path = os.path.join(ROOT, 'data', 'authors.json')
-    authors = load(authors_path, {})
-    if login not in authors:
-        authors[login] = person.get('display_name') or post['author']
+    authors_path = os.path.join(ROOT, 'data', 'authors.yml')
+    authors_doc = yaml.safe_load(open(authors_path, encoding='utf-8')) or {}
+    authors_doc.setdefault('authors', [])
+    if not any(str(a.get('slug')) == login for a in authors_doc['authors']):
+        authors_doc['authors'].append({'name': person.get('display_name') or post['author'], 'slug': login,
+                                       'active': True})
         with open(authors_path, 'w', encoding='utf-8') as f:
-            json.dump(authors, f, ensure_ascii=False, indent=1, sort_keys=True)
+            yaml.safe_dump(authors_doc, f, allow_unicode=True, sort_keys=False, width=10000)
 
     date = dt.datetime.strptime(post['date'][:19], '%Y-%m-%d %H:%M:%S')
     if cfg.get('start_date') and post['date'][:10] < cfg['start_date']:
@@ -149,7 +151,8 @@ def main(path):
         body += (f'\n<p class="fb-source"><a href="{html.escape(post["fb_url"], quote=True)}" target="_blank" '
                  f'rel="noopener">לפוסט המקורי בקבוצת הפייסבוק</a></p>')
 
-    known_cats = load(os.path.join(ROOT, 'data', 'categories.json'), {})
+    known_cats = {str(c.get('slug')) for c in (yaml.safe_load(open(os.path.join(ROOT, 'data', 'categories.yml'),
+                  encoding='utf-8')) or {}).get('categories') or []}
     cats = [c for c in (post.get('categories') or []) if c in known_cats] or cfg.get('categories') or ['כללי']
     pid = 900000 + len(seen) + 1
     while any(os.path.exists(os.path.join(ROOT, 'content', 'posts', str(y), f'{date:%Y-%m-%d}-{pid}.html'))

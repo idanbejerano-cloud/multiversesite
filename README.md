@@ -29,6 +29,12 @@
 - כל פוסט שקיים באתר מסומן `draft: false` במפורש. חשוב: Pages CMS ממלא שדה חסר בברירת המחדל, כך שפוסט בלי
   `draft` יהפוך לטיוטה בשמירה הבאה. לכן גם `tools/add_post.py` כותב `draft: false`.
 
+### כותבים וקטגוריות
+- הרשימות נמצאות ב-`data/authors.yml` ו-`data/categories.yml`, ועורכים אותן ב-Pages CMS ("כותבים", "קטגוריות").
+- `active: false` מסתיר כותב או קטגוריה מהבחירה בפוסט חדש, אבל הפוסטים הישנים ממשיכים להציג אותם.
+- `.github/workflows/cms-lists.yml` מריץ את `tools/update_cms_lists.py` אחרי כל שינוי: משלים `slug` חסר מהשם ומעדכן את
+  אפשרויות הבחירה ב-`.pages.yml` (בין הסימונים `# BEGIN` / `# END`).
+
 ### "הנצפים ביותר"
 - `.github/workflows/top-posts.yml` רץ כל לילה, קורא מ-GoatCounter את הפוסטים הנצפים ב-30 הימים האחרונים
   (`tools/top_posts.py`, סוד `GOATCOUNTER_API_KEY`) וכותב את `data/top_posts.json`. הרשימה ב-`site.yml` היא גיבוי.

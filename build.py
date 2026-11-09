@@ -49,8 +49,8 @@ def jload(name):
         return json.load(f)
 
 
-AUTHORS = jload('authors.json')
-CATS = jload('categories.json')
+AUTHORS = {}   # slug -> name, from data/authors.yml (see load_lists)
+CATS = {}      # slug -> {'name', 'parent'}, from data/categories.yml
 TAGS = jload('tags.json')
 REDIRECTS = jload('redirects.json')
 REDIRECTS.update(CFG.get('extra_redirects') or {})
@@ -252,6 +252,26 @@ def autoembed(h, flags):
 def slugify(text):
     text = re.sub(r'[\s_/]+', '-', str(text).strip().lower())
     return re.sub(r'[^\w\-א-ת]', '', text).strip('-') or 'post'
+
+
+def load_lists():
+    """Writers and categories, edited in Pages CMS ("כותבים", "קטגוריות"). Entries that are not active
+    are only hidden from the editor's choices; they still name the older posts."""
+    def items(name, key):
+        data = yaml.safe_load(open(os.path.join(ROOT, 'data', name), encoding='utf-8')) or {}
+        return data.get(key) or []
+    for a in items('authors.yml', 'authors'):
+        name = str(a.get('name') or '').strip()
+        if name:
+            AUTHORS[str(a.get('slug') or '').strip() or slugify(name)] = name
+    for c in items('categories.yml', 'categories'):
+        name = str(c.get('name') or '').strip()
+        if name:
+            parent = str(c.get('parent') or '').strip()
+            CATS[str(c.get('slug') or '').strip() or slugify(name)] = {'name': name, 'parent': slugify(parent) if parent else None}
+
+
+load_lists()
 
 
 def parse_date(v):

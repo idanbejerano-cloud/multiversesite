@@ -75,14 +75,29 @@ content:
     type: select
     options:
       values:
+      # BEGIN authors – made from data/authors.yml by tools/update_cms_lists.py, do not edit here
+      - name: alonros
+        label: אלון רוזנבלום
+      - name: idanb
+        label: עידן בז'רנו
+      - name: galpl
+        label: גל פלודה
       - name: talmichels
         label: Tal_Michels
-      - name: tomersoiker
-        label: Tomer Soiker
       - name: cundason
         label: cundason
-      - name: dorshilton
-        label: dorshilton
+      - name: nitzangel
+        label: ניצן ניקי מור
+      - name: alonshafir
+        label: אלון שפיר
+      - name: yehezkelsagiv
+        label: yehezkelsagiv
+      - name: benaya33
+        label: בניה שגיב
+      - name: brdroey
+        label: רועי ברדה
+      - name: shabso
+        label: שי גבסו
       - name: hadarperry93
         label: hadarperry93
       - name: idangueta
@@ -91,32 +106,19 @@ content:
         label: naamashtein
       - name: nattya01
         label: nattya01
-      - name: talmalka
-        label: talmalka
-      - name: yehezkelsagiv
-        label: yehezkelsagiv
       - name: lipaavihaybob
         label: אביחי בוב
-      - name: alonros
-        label: אלון רוזנבלום
-      - name: alonshafir
-        label: אלון שפיר
-      - name: benaya33
-        label: בניה שגיב
-      - name: galpl
-        label: גל פלודה
-      - name: yanaybn
-        label: ינאי בן נח
-      - name: nitzangel
-        label: ניצן ניקי מור
+      - name: talmalka
+        label: talmalka
+      - name: tomersoiker
+        label: Tomer Soiker
       - name: adiperl
         label: עדי פרל
-      - name: idanb
-        label: עידן בז'רנו
-      - name: brdroey
-        label: רועי ברדה
-      - name: shabso
-        label: שי גבסו
+      - name: dorshilton
+        label: dorshilton
+      - name: yanaybn
+        label: ינאי בן נח
+      # END authors
     description: אם הכותב לא ברשימה, השאירו ריק ומלאו את "שם כותב אחר".
   - name: author_name
     label: שם כותב אחר
@@ -128,6 +130,29 @@ content:
     options:
       multiple: true
       values:
+      # BEGIN categories – made from data/categories.yml by tools/update_cms_lists.py, do not edit here
+      - name: קולנוע
+        label: קולנוע
+      - name: ביקורות-קולנוע
+        label: ביקורות קולנוע
+      - name: חדשות-קולנוע
+        label: חדשות קולנוע
+      - name: טלוויזיה
+        label: טלוויזיה
+      - name: ביקורות-טלוויזיה
+        label: ביקורות טלוויזיה
+      - name: חדשות-טלוויזיה
+        label: חדשות טלוויזיה
+      - name: קומיקס
+        label: קומיקס
+      - name: ביקורות-קומיקס
+        label: ביקורות קומיקס
+      - name: חדשות-קומיקס
+        label: חדשות קומיקס
+      - name: טריילרים
+        label: טריילרים
+      - name: כללי
+        label: כללי
       - name: geekout
         label: Geekout
       - name: multi-pass
@@ -136,30 +161,9 @@ content:
         label: Shaninigans
       - name: בחזרה-לעבר
         label: בחזרה לעבר
-      - name: טלוויזיה
-        label: טלוויזיה
-      - name: ביקורות-טלוויזיה
-        label: טלוויזיה › ביקורות טלוויזיה
-      - name: חדשות-טלוויזיה
-        label: טלוויזיה › חדשות טלוויזיה
-      - name: טריילרים
-        label: טריילרים
-      - name: כללי
-        label: כללי
       - name: מפה-משם-ומכל-מקום-שבעולם
         label: מפה משם ומכל מקום שבעולם
-      - name: קולנוע
-        label: קולנוע
-      - name: ביקורות-קולנוע
-        label: קולנוע › ביקורות קולנוע
-      - name: חדשות-קולנוע
-        label: קולנוע › חדשות קולנוע
-      - name: קומיקס
-        label: קומיקס
-      - name: ביקורות-קומיקס
-        label: קומיקס › ביקורות קומיקס
-      - name: חדשות-קומיקס
-        label: קומיקס › חדשות קומיקס
+      # END categories
   - name: tags
     label: תגיות
     type: string
@@ -477,6 +481,58 @@ content:
   - name: media_fallback
     type: string
     hidden: true
+- name: authors
+  label: כותבים
+  type: file
+  path: data/authors.yml
+  format: yaml
+  fields:
+  - name: authors
+    label: כותבים
+    type: object
+    list: true
+    description: הסדר כאן הוא הסדר ברשימת הבחירה בפוסט. כותב שכבר לא כותב – מכבים את "מופיע ברשימה" במקום למחוק, כדי שהפוסטים הישנים שלו ימשיכו להציג את שמו. השינוי ברשימה מופיע בטופס הפוסט אחרי כמה דקות.
+    fields:
+    - name: name
+      label: שם שמוצג באתר
+      type: string
+      required: true
+    - name: active
+      label: מופיע ברשימת הכותבים בפוסט חדש
+      type: boolean
+      default: true
+    - name: slug
+      label: מזהה (באנגלית)
+      type: string
+      description: לכותב חדש אפשר להשאיר ריק – הוא ייווצר לבד מהשם. לא משנים מזהה של כותב שכבר יש לו פוסטים.
+- name: categories
+  label: קטגוריות
+  type: file
+  path: data/categories.yml
+  format: yaml
+  fields:
+  - name: categories
+    label: קטגוריות
+    type: object
+    list: true
+    description: הסדר כאן הוא הסדר ברשימת הבחירה בפוסט. קטגוריה שלא בשימוש – מכבים את "מופיע ברשימה" במקום למחוק, כדי שהפוסטים הישנים יישארו בה. השינוי מופיע בטופס הפוסט אחרי כמה דקות.
+    fields:
+    - name: name
+      label: שם הקטגוריה
+      type: string
+      required: true
+    - name: active
+      label: מופיעה ברשימת הקטגוריות בפוסט חדש
+      type: boolean
+      default: true
+    - name: parent
+      label: קטגוריית אב
+      type: string
+      description: לתת-קטגוריה – שם הקטגוריה שמעליה (למשל קולנוע). פוסט בתת-קטגוריה מופיע גם בעמוד של קטגוריית האב.
+    - name: slug
+      label: מזהה
+      type: string
+      description: לקטגוריה חדשה אפשר להשאיר ריק – הוא ייווצר לבד מהשם. לא משנים מזהה של קטגוריה קיימת, כי הוא חלק מהכתובת שלה.
 settings:
   commit:
     identity: user

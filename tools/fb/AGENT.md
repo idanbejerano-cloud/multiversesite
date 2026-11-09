@@ -35,7 +35,7 @@ accept, invite or change anything there.**
    the tool answers that the output "has been saved to <file>". Then run
    `python3 tools/fb/save_images.py <that file> /tmp/fbimg/<id>` — it prints the image files it wrote.
    If the post has no images, or this fails, continue without images — never invent or substitute images.
-4. Categories — slugs from `data/categories.json`:
+4. Categories — slugs from `data/categories.yml`:
    movie review → `["ביקורות-קולנוע", "קולנוע"]`, movie news/trailer → `["חדשות-קולנוע", "קולנוע"]`,
    TV review → `["ביקורות-טלוויזיה", "טלוויזיה"]`, TV news → `["חדשות-טלוויזיה", "טלוויזיה"]`,
    comics review → `["ביקורות-קומיקס", "קומיקס"]`, comics news → `["חדשות-קומיקס", "קומיקס"]`,
