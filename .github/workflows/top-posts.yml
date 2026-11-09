@@ -1,0 +1,52 @@
+# Refreshes the "most viewed" sidebar list from GoatCounter once a day (tools/top_posts.py).
+name: Update most viewed posts
+
+on:
+  schedule:
+    - cron: '17 2 * * *'        # 04:17/05:17 Israel time
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: top-posts
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GOATCOUNTER_API_KEY: ${{ secrets.GOATCOUNTER_API_KEY }}
+    steps:
+      - name: Skip until the GoatCounter key is added
+        if: env.GOATCOUNTER_API_KEY == ''
+        run: echo "Add the GOATCOUNTER_API_KEY secret to turn this on."
+
+      - uses: actions/checkout@v4
+        if: env.GOATCOUNTER_API_KEY != ''
+
+      - name: Read the statistics
+        if: env.GOATCOUNTER_API_KEY != ''
+        run: |
+          pip install -q pyyaml
+          python3 tools/top_posts.py
+
+      - name: Save and rebuild the site
+        if: env.GOATCOUNTER_API_KEY != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- data/top_posts.json && [ -z "$(git ls-files --others --exclude-standard data/top_posts.json)" ]; then
+            echo "Nothing changed."; exit 0
+          fi
+          git config user.name "Most viewed updater"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/top_posts.json
+          git commit -q -m "Most viewed posts: updated from the site statistics"
+          for i in 1 2 3; do
+            git push origin HEAD:main && break
+            git pull -q --rebase origin main
+          done
+          gh workflow run deploy.yml --ref main

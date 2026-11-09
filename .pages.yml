@@ -15,9 +15,29 @@ content:
   subfolders: true
   format: yaml-frontmatter
   filename: '{year}-{month}-{day}-{hour}{minute}{second}.html'
+  actions:
+  - name: publish
+    label: פרסום
+    scope: entry
+    workflow: publish.yml
+    cancelable: false
+    confirm:
+      title: לפרסם את הפוסט באתר?
+      message: הגרסה השמורה של הפוסט תעלה לאתר תוך כמה דקות. אם יש שינויים שלא נשמרו – לבטל, ללחוץ קודם Save ורק אז לפרסם. פוסט שמתפרסם בפעם הראשונה מקבל את התאריך והשעה של עכשיו. אחרי הפרסום מרעננים את העמוד לפני שממשיכים לערוך.
+      button: פרסום
+  - name: unpublish
+    label: החזרה לטיוטה
+    scope: entry
+    workflow: publish.yml
+    cancelable: false
+    confirm:
+      title: להסיר את הפוסט מהאתר?
+      message: הפוסט יוסר מהאתר תוך כמה דקות ויישמר כטיוטה. אפשר לפרסם אותו שוב בכל עת.
+      button: החזרה לטיוטה
   view:
     fields:
     - title
+    - draft
     - date
     - author
     primary: title
@@ -34,6 +54,12 @@ content:
     label: כותרת
     type: string
     required: true
+  - name: draft
+    label: טיוטה
+    type: boolean
+    default: true
+    readonly: true
+    description: Save שומר בלי לפרסם. כדי שהפוסט יופיע באתר – שומרים ואז לוחצים "פרסום" בראש העמוד. "החזרה לטיוטה" מוריד פוסט מהאתר.
   - name: slug
     label: כתובת הפוסט
     type: string
@@ -437,10 +463,10 @@ content:
       options:
         language: html
   - name: top_posts
-    label: פוסטים ב"הנצפים ביותר"
+    label: פוסטים ב"הנצפים ביותר" (גיבוי)
     type: string
     list: true
-    description: כתובת של פוסט באתר, למשל /2016/05/06/ehrenreich-lands-is-young-han-solo/
+    description: הרשימה מתעדכנת לבד כל יום לפי הצפיות. הפוסטים כאן מוצגים רק כשאין עדיין נתוני צפיות. כתובת של פוסט באתר, למשל /2016/05/06/ehrenreich-lands-is-young-han-solo/
   - name: url
     label: כתובת האתר
     type: string

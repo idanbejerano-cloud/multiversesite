@@ -156,7 +156,7 @@ def main(path):
               for y in (date.year,)):
         pid += 1
     url = f'/{date:%Y/%m/%d}/fb-{fb_id}/'
-    fm = {'id': pid, 'title': title, 'date': date.strftime('%Y-%m-%d %H:%M:%S'), 'url': url, 'author': login,
+    fm = {'id': pid, 'draft': False, 'title': title, 'date': date.strftime('%Y-%m-%d %H:%M:%S'), 'url': url, 'author': login,
           'categories': cats, 'tags': cfg.get('tags') or []}
     if imgs:
         fm['image'] = f'/wp-content/uploads/{imgs[0][0]}'

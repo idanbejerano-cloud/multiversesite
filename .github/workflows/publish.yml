@@ -1,0 +1,45 @@
+# Run by the "פרסום" / "החזרה לטיוטה" buttons on a post in Pages CMS (see .pages.yml → actions).
+name: Publish post
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: Request sent by Pages CMS (JSON)
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish-post
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update the post
+        env:
+          PAYLOAD: ${{ inputs.payload }}
+          COMMIT_MSG_FILE: ${{ runner.temp }}/commit-msg
+        run: python3 tools/publish_post.py
+
+      - name: Save and rebuild the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MSG_FILE: ${{ runner.temp }}/commit-msg
+        run: |
+          if [ ! -s "$COMMIT_MSG_FILE" ]; then echo "Nothing to save."; exit 0; fi
+          git config user.name "Pages CMS publish"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -F "$COMMIT_MSG_FILE"
+          for i in 1 2 3; do
+            git push origin HEAD:main && break
+            git pull -q --rebase origin main
+          done
+          # a push made by this workflow does not start other workflows, so start the site build here
+          gh workflow run deploy.yml --ref main

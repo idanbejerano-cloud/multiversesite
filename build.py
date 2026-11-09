@@ -281,6 +281,8 @@ def load_items(kind):
                 print('skipping (no front matter):', fn, file=sys.stderr)
                 continue
             p = Post(yaml.safe_load(m.group(1)) or {})
+            if p.get('draft') is True:          # saved in the editor but not published yet
+                continue
             body = (m.group(2) or p.pop('body', '') or '').strip()
             if '<!--more-->' in body:
                 teaser, rest = body.split('<!--more-->', 1)
@@ -484,7 +486,17 @@ def main():
     top = []
     thumbs_dir = os.path.join(OUT, 'assets', 'thumbs')
     os.makedirs(thumbs_dir, exist_ok=True)
-    for url in CFG.get('top_posts') or []:
+    # the most-viewed list is refreshed from the site statistics (tools/top_posts.py); the list in
+    # site.yml is used until there are statistics
+    top_urls = CFG.get('top_posts') or []
+    try:
+        auto = json.load(open(os.path.join(ROOT, 'data', 'top_posts.json'), encoding='utf-8'))
+        auto_urls = [u for u in auto.get('posts') or [] if by_url.get(norm_link(u))]
+        if len(auto_urls) >= 4:
+            top_urls = auto_urls[:int(CFG.get('top_posts_count') or 8)]
+    except (OSError, ValueError):
+        pass
+    for url in top_urls:
         p = by_url.get(norm_link(url))
         if not p:
             print('top_posts: no post at', url, file=sys.stderr)

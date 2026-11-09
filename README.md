@@ -21,6 +21,18 @@
 עורכים נוספים: מזמינים אותם במייל מתוך Pages CMS (לא צריך חשבון GitHub).
 ההגדרות של הממשק נמצאות בקובץ `.pages.yml`.
 
+### טיוטות ופרסום
+- פוסט חדש נשמר עם `draft: true`: Save שומר אותו בלי שיופיע באתר (build.py מדלג על טיוטות).
+- הכפתור "פרסום" בראש עמוד הפוסט מפעיל את `.github/workflows/publish.yml` (`tools/publish_post.py`):
+  `draft: false`, תאריך ושעה של עכשיו בפרסום ראשון, העברה לתיקיית השנה ב-`content/posts/<שנה>/`, ובנייה של האתר.
+  "החזרה לטיוטה" מחזיר `draft: true` ומוריד את הפוסט מהאתר.
+- כל פוסט שקיים באתר מסומן `draft: false` במפורש. חשוב: Pages CMS ממלא שדה חסר בברירת המחדל, כך שפוסט בלי
+  `draft` יהפוך לטיוטה בשמירה הבאה. לכן גם `tools/add_post.py` כותב `draft: false`.
+
+### "הנצפים ביותר"
+- `.github/workflows/top-posts.yml` רץ כל לילה, קורא מ-GoatCounter את הפוסטים הנצפים ב-30 הימים האחרונים
+  (`tools/top_posts.py`, סוד `GOATCOUNTER_API_KEY`) וכותב את `data/top_posts.json`. הרשימה ב-`site.yml` היא גיבוי.
+
 ## תגובות של קוראים
 - הטופס בתחתית כל פוסט שולח את התגובה לשירות קטן ב-Cloudflare Workers (`worker/`), שכותב אותה כקובץ
   ל-`content/comments/new/` עם `approved: false` (ואם הוגדר – שולח מייל התראה דרך Brevo).
