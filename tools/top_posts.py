@@ -39,7 +39,14 @@ def main():
         print('No GoatCounter key or site code – nothing to do.')
         return
     if '--check' in sys.argv:        # connection check: status codes and error messages only
-        for path in ('/api/v0/me', '/api/v0/stats/total', '/api/v0/stats/hits', '/api/v0/stats/hits?limit=5'):
+        now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+        d30, d3 = now - dt.timedelta(days=30), now - dt.timedelta(days=3)
+        for path in ('/api/v0/stats/hits?limit=100',
+                     f'/api/v0/stats/hits?start={d3:%Y-%m-%d}',
+                     f'/api/v0/stats/hits?start={d30:%Y-%m-%d}',
+                     f'/api/v0/stats/hits?start={d3:%Y-%m-%dT%H:%M:%SZ}',
+                     f'/api/v0/stats/hits?start={d30:%Y-%m-%dT%H:%M:%SZ}&end={now:%Y-%m-%dT%H:%M:%SZ}',
+                     f'/api/v0/stats/hits?start={d3:%Y-%m-%dT%H:%M:%SZ}&end={now:%Y-%m-%dT%H:%M:%SZ}&limit=100'):
             r2 = urllib.request.Request(f'https://{code}.goatcounter.com{path}', headers={
                 'Authorization': f'Bearer {key}', 'Content-Type': 'application/json', 'User-Agent': 'multiversesite-top-posts'})
             try:
