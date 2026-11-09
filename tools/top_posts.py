@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -31,7 +32,8 @@ def site_code():
 
 
 def main():
-    key = (os.environ.get('GOATCOUNTER_API_KEY') or '').strip()
+    key = (os.environ.get('GOATCOUNTER_API_KEY') or '').strip().strip('"\'').split()[-1:] or ['']
+    key = key[0]
     code = site_code()
     if not key or not code:
         print('No GoatCounter key or site code – nothing to do.')
@@ -45,6 +47,10 @@ def main():
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             data = json.load(r)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', 'replace')[:300]
+        print(f'::error::GoatCounter request failed: {e} {detail}')
+        sys.exit(1)
     except Exception as e:  # noqa: BLE001
         print(f'::error::GoatCounter request failed: {e}')
         sys.exit(1)
