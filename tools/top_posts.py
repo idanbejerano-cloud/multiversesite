@@ -38,6 +38,17 @@ def main():
     if not key or not code:
         print('No GoatCounter key or site code – nothing to do.')
         return
+    if '--check' in sys.argv:        # connection check: status codes and error messages only
+        for path in ('/api/v0/me', '/api/v0/stats/total', '/api/v0/stats/hits', '/api/v0/stats/hits?limit=5'):
+            r2 = urllib.request.Request(f'https://{code}.goatcounter.com{path}', headers={
+                'Authorization': f'Bearer {key}', 'Content-Type': 'application/json', 'User-Agent': 'multiversesite-top-posts'})
+            try:
+                with urllib.request.urlopen(r2, timeout=60) as r:
+                    body = json.load(r)
+                    print(f'::warning::{path} -> {r.status}, keys: {sorted(body)[:6]}, hits: {len(body.get("hits") or [])}')
+            except urllib.error.HTTPError as e:
+                print(f'::warning::{path} -> {e.code} {e.read().decode("utf-8", "replace")[:200]}')
+        return
     end = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
     start = end - dt.timedelta(days=DAYS)
     q = urllib.parse.urlencode({'start': start.strftime('%Y-%m-%dT%H:%M:%SZ'),

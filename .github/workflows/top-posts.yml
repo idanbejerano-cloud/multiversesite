@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '17 2 * * *'        # 04:17/05:17 Israel time
   workflow_dispatch:
+    inputs:
+      check:
+        description: Only check the connection to GoatCounter
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -31,7 +36,7 @@ jobs:
         if: env.GOATCOUNTER_API_KEY != ''
         run: |
           pip install -q pyyaml
-          python3 tools/top_posts.py
+          python3 tools/top_posts.py ${{ inputs.check && '--check' || '' }}
 
       - name: Save and rebuild the site
         if: env.GOATCOUNTER_API_KEY != ''
