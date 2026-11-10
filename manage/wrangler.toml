@@ -1,0 +1,10 @@
+# The management app (ניהול מולטיוורס) – a static app on Cloudflare Workers (free plan).
+# It lives on its own address, apart from multiversesite.com, so the scripts that the public site
+# loads (Facebook, X, Instagram, Brevo, statistics) can never reach the GitHub key saved in the app.
+# Deployed automatically by .github/workflows/manage-app.yml; multiversesite.com/manage/ redirects here.
+name = "multiverse-manage"
+compatibility_date = "2026-01-15"
+workers_dev = true
+
+[assets]
+directory = "./public"

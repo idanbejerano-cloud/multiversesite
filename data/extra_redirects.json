@@ -2,5 +2,6 @@
  "/Geekout/": "/category/geekout/",
  "/admin/": "https://app.pagescms.org/",
  "/wp-admin/": "https://app.pagescms.org/",
- "/geekout/": "/category/geekout/"
+ "/geekout/": "/category/geekout/",
+ "/manage/": "https://multiverse-manage.multiversesite.workers.dev/"
 }
