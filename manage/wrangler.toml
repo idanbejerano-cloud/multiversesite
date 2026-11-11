@@ -1,10 +1,12 @@
-# The management app (ניהול מולטיוורס) – a static app on Cloudflare Workers (free plan).
-# It lives on its own address, apart from multiversesite.com, so the scripts that the public site
-# loads (Facebook, X, Instagram, Brevo, statistics) can never reach the GitHub key saved in the app.
-# Deployed automatically by .github/workflows/manage-app.yml; multiversesite.com/manage/ redirects here.
+# The management app (ניהול מולטיוורס) – a Cloudflare Worker (free plan) that serves the app and
+# talks to GitHub and GoatCounter for it. It lives on its own address, apart from multiversesite.com.
+# Sign-in: Cloudflare Access (Workers & Pages > multiverse-manage > Access), email code.
+# Secrets, set once in the Cloudflare dashboard (Settings > Variables and Secrets):
+#   GITHUB_TOKEN           fine-grained token for idanbejerano-cloud/multiversesite (Contents + Actions: read and write)
+#   GOATCOUNTER_API_KEY    copied here by the deploy workflow from the GitHub secret of the same name
+#   ACCESS_TEAM_DOMAIN, ACCESS_AUD   only needed if the built-in Access identity isn't available (see manage/README.md)
+# Deployed by .github/workflows/manage-app.yml, which first packs manage/public into src/assets.js.
 name = "multiverse-manage"
+main = "src/worker.js"
 compatibility_date = "2026-01-15"
 workers_dev = true
-
-[assets]
-directory = "./public"

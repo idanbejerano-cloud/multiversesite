@@ -16,7 +16,8 @@
 ## אפליקציית הניהול לטלפון
 `manage/` – אפליקציה למסך הבית (עם הלוגו) שמרכזת את כל הניהול: תגובות, טיוטות ופרסום, פוסט חדש עם תמונה,
 מצב האתר, הסוכן מפייסבוק, צפיות וקישורים לכל השירותים. כתובת: https://multiverse-manage.multiversesite.workers.dev/
-(גם `multiversesite.com/manage/` מעביר אליה). פרטים ב-`manage/README.md`.
+(גם `multiversesite.com/manage/` מעביר אליה). נכנסים עם קוד למייל, רק מי שברשימה ב-Cloudflare Access;
+המפתחות שמורים ב-Cloudflare ולא בטלפונים. פרטים והגדרה ב-`manage/README.md`.
 
 ## עריכה בממשק חזותי (Pages CMS)
 נכנסים ל-https://app.pagescms.org עם חשבון ה-GitHub, בוחרים את המאגר `multiversesite`, ושם יש "פוסטים" ו"עמודים":

@@ -1,8 +1,8 @@
 // מולטיוורס – ניהול האתר מהטלפון.
-// A small app (no build step, no libraries) that works on the site's GitHub repository through
-// the GitHub REST API with a personal access token kept only on this phone. It is served from its own
-// address (Cloudflare Workers, see manage/README.md), never from multiversesite.com, so the scripts the
-// public site loads can't read that token.
+// A small app (no build step, no libraries) served by a Cloudflare Worker on its own address
+// (see manage/README.md). People sign in with an email code (Cloudflare Access); the Worker keeps the
+// GitHub key and the GoatCounter key and passes the app's requests on (/api/gh/..., /api/gc/...),
+// so nobody keeps a key on their phone.
 // What it does:
 // comments waiting for approval, drafts and publishing, a quick new post, the site build status,
 // the Facebook-group agent's log and the GoatCounter statistics, plus links to every other service.
@@ -10,7 +10,7 @@
 const OWNER = 'idanbejerano-cloud';
 const REPO = 'multiversesite';
 const BRANCH = window.MV_BRANCH || 'main';
-const API = 'https://api.github.com';
+const API = '/api/gh';
 const RP = `/repos/${OWNER}/${REPO}`;
 const SITE = 'https://multiversesite.com';
 const CMS = `https://app.pagescms.org/${OWNER}/${REPO}/${encodeURIComponent(BRANCH)}`;
@@ -22,7 +22,7 @@ const AGENT_URL = 'https://claude.ai/code/routines/trig_01QHhVbZUUZjz6tv82GMThdE
 const AGENT_EVERY_HOURS = 3;     // the agent runs at minute 34 of every third hour (UTC 0, 3, 6, ...)
 const AGENT_MINUTE = 34;
 const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new?' + new URLSearchParams({
-  name: 'Multiverse app', description: 'Phone app for managing multiversesite.com',
+  name: 'Multiverse management app', description: 'Kept in Cloudflare by the management app (multiverse-manage)',
   target_name: OWNER, expires_in: 'none', contents: 'write', actions: 'write',
 });
 const WORKFLOW_NAMES = {
@@ -37,9 +37,11 @@ const store = {
   del(k) { try { localStorage.removeItem('mv.' + k); } catch { /* blocked */ } },
 };
 
+for (const k of ['token', 'gcKey', 'user']) store.del(k);      // keys from the first version, which kept them on the phone
+
 const S = {
-  token: store.get('token', ''), gcKey: store.get('gcKey', ''), user: store.get('user', null),
-  tab: 'home', loaded: false, loading: false, error: '', authError: '',
+  me: null, block: '', name: store.get('myName', ''),
+  tab: 'home', loaded: false, loading: false, error: '',
   head: '', commits: [], runs: [], comments: [], posts: [], authors: [], categories: [],
   fbSeen: {}, fbCfg: {}, fbLast: null, top: null, loadedAt: 0,
   stats: null, statsError: '', statsLoading: false, index: null, indexLoading: false,
@@ -99,20 +101,24 @@ const ICONS = {
 const icon = (name, cls = '') => el('span', { class: `ic ${cls}`, 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[name] || ''}</svg>` });
 
 // dates ---------------------------------------------------------------
-const rtf = new Intl.RelativeTimeFormat('he', { numeric: 'auto' });
 function parseLocal(s) {                     // '2026-11-09 20:30:00' (Israel time, as the site writes it)
   const m = /^(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d)(?::(\d\d))?)?/.exec(str(s));
   return m ? new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) : null;
 }
-function ago(d) {
+function ago(d) {                               // Hebrew relative time ("לפני שעתיים"), past or future
   if (!d || isNaN(d)) return '';
   const s = (d.getTime() - Date.now()) / 1000;
   const a = Math.abs(s);
   if (a < 50) return 'עכשיו';
-  if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
-  if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
-  if (a < 6 * 86400) return rtf.format(Math.round(s / 86400), 'day');
-  return dayMonth(d);
+  let t;
+  if (a < 3600) { const n = Math.round(a / 60); t = n === 1 ? 'דקה' : `${n} דקות`; }
+  else if (a < 86400) { const n = Math.round(a / 3600); t = n === 1 ? 'שעה' : n === 2 ? 'שעתיים' : `${n} שעות`; }
+  else if (a < 6 * 86400) {
+    const n = Math.round(a / 86400);
+    if (n === 1) return s < 0 ? 'אתמול' : 'מחר';
+    t = n === 2 ? 'יומיים' : `${n} ימים`;
+  } else return dayMonth(d);
+  return s < 0 ? `לפני ${t}` : `בעוד ${t}`;
 }
 const dayMonth = (d) => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
 const clock = (d) => d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
@@ -282,40 +288,68 @@ class ApiError extends Error {
 
 function explain(status, data, path, method) {
   const msg = str(data && data.message);
-  if (status === 401) return 'מפתח הגישה ל-GitHub לא תקין או שפג תוקפו. צריך ליצור מפתח חדש.';
+  if (status === 401) return 'המפתח של GitHub ששמור ב-Cloudflare לא תקין או שפג תוקפו.';
   if (status === 403 && /rate limit/i.test(msg)) return 'GitHub הגביל לרגע את מספר הבקשות. נסו שוב בעוד כמה דקות.';
   if ((status === 403 || status === 404) && method !== 'GET') {
     const what = path.includes('/actions/') ? 'Actions' : 'Contents';
-    return `למפתח הגישה אין הרשאת כתיבה ל-${what}. צריך מפתח עם Contents ו-Actions במצב Read and write למאגר multiversesite.`;
+    return `למפתח של GitHub שב-Cloudflare אין הרשאת כתיבה ל-${what}. צריך מפתח עם Contents ו-Actions במצב Read and write למאגר multiversesite.`;
   }
   if (status === 409 || status === 422) return 'מישהו שינה את האתר באותו רגע. רעננו ונסו שוב.';
   if (status >= 500) return 'GitHub לא זמין כרגע. נסו שוב בעוד דקה.';
   return `GitHub החזיר שגיאה ${status}${msg ? `: ${msg}` : ''}`;
 }
 
-async function gh(path, { method = 'GET', body, raw = false, okMissing = false, token = S.token } = {}) {
-  const headers = {
-    Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (body) headers['Content-Type'] = 'application/json';
+// Errors from the app's own Worker that stop everything until something is set up or signed in again.
+const BLOCKS = {
+  no_access: 'הכניסה עם מייל עוד לא הופעלה לאפליקציה.',
+  bad_access_token: 'הכניסה לאפליקציה פגה. צריך להתחבר שוב.',
+  signin: 'הכניסה לאפליקציה פגה. צריך להתחבר שוב.',
+  access_needs_config: 'הכניסה עם מייל פועלת, אבל חסרות שתי הגדרות ב-Cloudflare.',
+  no_github_token: 'עוד לא נשמר ב-Cloudflare המפתח של GitHub.',
+  github_token_bad: 'המפתח של GitHub ששמור ב-Cloudflare לא תקין או שפג תוקפו.',
+};
+function block(kind) {
+  S.block = kind === 'bad_access_token' ? 'signin' : kind;
+  return new ApiError(401, BLOCKS[kind] || 'צריך להתחבר שוב.');
+}
+
+async function apiFetch(url, init = {}) {
   let res;
   try {
-    res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    res = await fetch(url, { ...init, cache: 'no-store', redirect: 'manual', credentials: 'same-origin' });
   } catch {
-    throw new ApiError(0, 'אין חיבור לאינטרנט, או ש-GitHub לא עונה. נסו שוב בעוד רגע.');
+    throw new ApiError(0, 'אין חיבור לאינטרנט, או שהשרת לא עונה. נסו שוב בעוד רגע.');
   }
+  if (res.type === 'opaqueredirect' || res.status === 0) throw block('signin');     // Access wants a new sign-in
+  return res;
+}
+
+async function gh(path, { method = 'GET', body, raw = false, okMissing = false } = {}) {
+  const headers = { Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json' };
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await apiFetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (res.status === 404 && okMissing) return null;
   if (!res.ok) {
     let data = null;
     try { data = await res.json(); } catch { /* not json */ }
-    const err = new ApiError(res.status, explain(res.status, data, path, method), data);
-    if (res.status === 401 && token === S.token) { S.authError = err.message; }
-    throw err;
+    if (data && BLOCKS[data.error]) throw block(data.error);
+    if (res.status === 401) throw block('github_token_bad');
+    throw new ApiError(res.status, explain(res.status, data, path, method), data);
   }
   if (res.status === 204) return null;
   return raw ? res.text() : res.json();
+}
+
+async function loadMe() {
+  const res = await apiFetch('/api/me');
+  let data = null;
+  try { data = await res.json(); } catch { /* not json */ }
+  if (!res.ok) throw (data && BLOCKS[data.error]) ? block(data.error) : new ApiError(res.status, 'השרת של האפליקציה החזיר שגיאה.');
+  S.me = data;
+  if (!data.ready.github) throw block('no_github_token');
+  if (!S.name) S.name = str(data.name) || str(data.email).replace(/@.*$/, '');
+  S.block = '';
+  return data;
 }
 
 const encPath = (p) => p.split('/').map(encodeURIComponent).join('/');
@@ -381,19 +415,18 @@ async function blob(sha, parse) {
 
 // ------------------------------------------------------------------ loading everything
 async function load({ quiet = false } = {}) {
-  if (!S.token || S.loading) return;
+  if (S.loading) return;
   const wasLoaded = S.loaded;
   S.loading = true;
   S.error = '';
   if (!quiet && !wasLoaded) render(); else paintTopbar();
   try {
     const year = new Date().getFullYear();
-    const [commits, runs, user] = await Promise.all([
+    if (!S.me) await loadMe();
+    const [commits, runs] = await Promise.all([
       gh(`${RP}/commits?sha=${encodeURIComponent(BRANCH)}&per_page=12`),
       gh(`${RP}/actions/runs?per_page=30`),
-      S.user ? Promise.resolve(S.user) : gh('/user').catch(() => null),
     ]);
-    if (user && !S.user) { S.user = { login: user.login, name: user.name || user.login }; store.set('user', S.user); }
     const head = commits[0].sha;
     const [cTree, rootTree, yTree, pyTree, dTree, fbCommits] = await Promise.all([
       listTree(`${head}:content/comments/new`), listTree(`${head}:content/posts`),
@@ -435,7 +468,7 @@ async function load({ quiet = false } = {}) {
     store.set('blobs', blobCache);
 
     Object.assign(S, {
-      head, loaded: true, loadedAt: Date.now(), authError: '',
+      head, loaded: true, loadedAt: Date.now(), block: '',
       commits: commits.map((c) => ({
         sha: c.sha, url: c.html_url, message: str(c.commit.message.split('\n')[0]),
         who: str(c.commit.author && c.commit.author.name) || (c.author && c.author.login) || '',
@@ -449,7 +482,7 @@ async function load({ quiet = false } = {}) {
       fbLast: fbCommits && fbCommits[0] ? new Date(fbCommits[0].commit.committer.date) : null,
     });
     setBadge();
-    if (S.gcKey && !S.stats && !S.statsLoading) loadStats();
+    if (statsReady() && !S.stats && !S.statsLoading) loadStats();
     watchRuns();
   } catch (e) {
     S.error = e.message || String(e);
@@ -511,17 +544,16 @@ function setBadge() {
 
 // ------------------------------------------------------------------ GoatCounter
 const gcTime = (d) => `${d.toISOString().slice(0, 13)}:00:00Z`;   // GoatCounter wants the colons as they are
-async function gc(path, key = S.gcKey) {
-  let res;
-  try { res = await fetch(GC + '/api/v0' + path, { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' } }); }
-  catch { throw new Error('אין חיבור ל-GoatCounter כרגע.'); }
-  if (res.status === 401 || res.status === 403) throw new Error('GoatCounter לא קיבל את המפתח. צריך מפתח עם ההרשאה Read statistics.');
+const statsReady = () => Boolean(S.me && S.me.ready && S.me.ready.stats);
+async function gc(path) {                                   // through the Worker, which holds the GoatCounter key
+  const res = await apiFetch('/api/gc' + path);
+  if (res.status === 401 || res.status === 403) throw new Error('GoatCounter לא קיבל את המפתח ששמור ב-Cloudflare (GOATCOUNTER_API_KEY).');
   if (!res.ok) throw new Error(`GoatCounter החזיר שגיאה ${res.status}.`);
   return res.json();
 }
 
 async function loadStats() {
-  if (!S.gcKey) return;
+  if (!statsReady()) return;
   S.statsLoading = true;
   S.statsError = '';
   paintIf('stats');
@@ -600,16 +632,17 @@ async function busy(key, fn) {
   if (S.busy.has(key)) return;
   S.busy.add(key);
   paint();
-  try { return await fn(); } catch (e) { toast(e.message || String(e), 'bad'); if (S.authError) render(); } finally { S.busy.delete(key); paint(); }
+  try { return await fn(); } catch (e) { toast(e.message || String(e), 'bad'); if (S.block) render(); } finally { S.busy.delete(key); paint(); }
 }
-const who = () => (S.user && S.user.name) || 'האפליקציה';
+const who = () => S.name || 'האפליקציה';
+const byApp = () => `(מאפליקציית הניהול, ${who()})`;
 
 async function approveComments(list, approved = true) {
   const n = list.length;
   const headline = n === 1
     ? `${approved ? 'אישור' : 'הסתרת'} תגובה: ${str(list[0].author) || 'אנונימי'} על "${str(list[0].post_title).slice(0, 60)}"`
     : `${approved ? 'אישור' : 'הסתרת'} ${n} תגובות`;
-  await commitFiles(`${headline} (מאפליקציית הניהול)`, async (head) => {
+  await commitFiles(`${headline} ${byApp()}`, async (head) => {
     const out = [];
     for (const c of list) {
       const text = await readFile(c.path, head);
@@ -630,7 +663,7 @@ async function approveComments(list, approved = true) {
 }
 
 async function deleteComment(c) {
-  await commitFiles(`מחיקת תגובה: ${str(c.author) || 'אנונימי'} על "${str(c.post_title).slice(0, 60)}" (מאפליקציית הניהול)`, async (head) => {
+  await commitFiles(`מחיקת תגובה: ${str(c.author) || 'אנונימי'} על "${str(c.post_title).slice(0, 60)}" ${byApp()}`, async (head) => {
     const text = await readFile(c.path, head);
     return text == null ? [] : [{ path: c.path, remove: true }];
   });
@@ -729,11 +762,11 @@ const TABS = [
 function render() {
   const app = $('#app');
   app.replaceChildren();
-  if (!S.token || S.authError) { app.append(setupView()); return; }
+  if (S.block) { app.append(blockView()); return; }
   app.append(topbar(), el('main', { class: `view view-${S.tab}`, id: 'view' }, viewFor(S.tab)), tabbar());
 }
 function paint() {                                // redraw the current tab and the frame, keep the scroll position
-  if (!S.token || S.authError) return render();
+  if (S.block) return render();
   const y = window.scrollY;
   const v = $('#view');
   if (!v) return render();
@@ -761,7 +794,7 @@ function topbar() {
     el('div', { class: 'brand' }, 'מולטיוורס', el('small', { text: 'ניהול האתר' })),
     el('button', { class: `icon-btn${S.loading || S.statsLoading ? ' spin' : ''}`, 'aria-label': 'רענון', title: 'רענון', onclick: () => {
       load({ quiet: true });
-      if (S.gcKey && (S.tab === 'stats' || S.tab === 'home')) loadStats();
+      if (statsReady() && (S.tab === 'stats' || S.tab === 'home')) loadStats();
     } }, icon('refresh')));
 }
 
@@ -892,9 +925,9 @@ function bars(days, { height = 64 } = {}) {            // right to left: the old
 }
 
 function statsPanel() {
-  if (!S.gcKey) {
+  if (!statsReady()) {
     return el('a', { class: 'panel p-stats wide connect', href: '#stats' },
-      el('h2', { text: 'צפיות' }), el('p', { text: 'חברו את GoatCounter כדי לראות כאן כמה קוראים נכנסו היום ובשבוע האחרון.' }));
+      el('h2', { text: 'צפיות' }), el('p', { text: 'הסטטיסטיקות עוד לא מחוברות לאפליקציה.' }));
   }
   const s = S.stats;
   return el('a', { class: 'panel p-stats wide', href: '#stats' },
@@ -1073,21 +1106,11 @@ function commentCard(c, isPending) {
 function statsView() {
   const page = el('div', { class: 'page' }, el('div', { class: 'page-head' }, el('h1', { text: 'צפיות' }),
     S.stats ? el('small', { class: 'muted', text: `עודכן ${ago(new Date(S.stats.at))}` }) : null));
-  if (!S.gcKey) {
-    const input = el('input', { type: 'password', class: 'field', placeholder: 'המפתח מ-GoatCounter', dir: 'ltr', autocomplete: 'off', 'aria-label': 'מפתח GoatCounter' });
+  if (!statsReady()) {
     page.append(el('section', { class: 'panel setup-card' },
-      el('h2', { text: 'חיבור הסטטיסטיקות' }),
-      el('ol', { class: 'steps' },
-        el('li', null, 'פותחים את ', el('a', { href: `${GC}/user/api`, target: '_blank', rel: 'noopener', text: 'הגדרות ה-API ב-GoatCounter' }), '.'),
-        el('li', { text: 'יוצרים מפתח חדש, מסמנים רק את Read statistics, ומעתיקים אותו.' }),
-        el('li', { text: 'מדביקים כאן ולוחצים "חיבור". המפתח נשמר רק בטלפון הזה.' })),
-      input,
-      el('button', { class: 'btn primary wide', onclick: async (e) => {
-        const key = input.value.trim();
-        if (!key) { input.focus(); return; }
-        e.target.disabled = true;
-        try { await gc('/me', key); S.gcKey = key; store.set('gcKey', key); S.stats = null; loadStats(); paint(); toast('הסטטיסטיקות מחוברות.'); } catch (err) { toast(err.message, 'bad'); e.target.disabled = false; }
-      } }, 'חיבור')));
+      el('h2', { text: 'הסטטיסטיקות עוד לא מחוברות' }),
+      el('p', { class: 'muted', text: 'האפליקציה לוקחת את המפתח של GoatCounter מהסוד GOATCOUNTER_API_KEY ב-GitHub, כשהיא מתעדכנת ב-Cloudflare. אם הסוד קיים, הפעלה אחת של "Deploy management app" ב-GitHub Actions מחברת אותן.' }),
+      ext(`https://github.com/${OWNER}/${REPO}/actions/workflows/manage-app.yml`, 'הפעלת העדכון ב-GitHub Actions', 'Run workflow')));
     page.append(topListPanel());
     return page;
   }
@@ -1112,9 +1135,7 @@ function statsView() {
         el('b', { class: 'num', text: h.n.toLocaleString('he-IL') })))) : el('p', { class: 'muted', text: 'עוד אין צפיות השבוע.' })),
     el('section', { class: 'panel links' },
       ext(GC, 'הלוח המלא ב-GoatCounter', 'מקורות תנועה, מדינות, דפדפנים'),
-      ext('https://dash.cloudflare.com/?to=/:account/web-analytics', 'Cloudflare Web Analytics', 'מדידה שנייה של הכניסות'),
-      el('button', { class: 'link-row', onclick: () => { S.gcKey = ''; S.stats = null; store.del('gcKey'); paint(); } },
-        el('span', { class: 'link-text' }, el('b', { text: 'ניתוק GoatCounter' }), el('small', { text: 'מוחק את המפתח מהטלפון' })), icon('close'))));
+      ext('https://dash.cloudflare.com/?to=/:account/web-analytics', 'Cloudflare Web Analytics', 'מדידה שנייה של הכניסות')));
   return page;
 }
 const cleanTitle = (t) => str(t).replace(/\s*[|–-]\s*מולטיוורס\s*$/, '');
@@ -1172,58 +1193,89 @@ function moreView() {
       ext(`https://github.com/${OWNER}/${REPO}`, 'GitHub', 'המאגר של האתר'),
       ext(`https://github.com/${OWNER}/${REPO}/actions`, 'GitHub Actions', 'כל הבניות וההרצות האוטומטיות')),
     group('האפליקציה',
-      el('p', { class: 'muted', text: `מחובר ל-GitHub${S.user ? ` בתור ${S.user.login}` : ''}. המפתחות נשמרים רק בטלפון הזה.` }),
-      el('button', { class: 'link-row', onclick: async () => {
-        if (!(await confirmSheet({ title: 'לנתק את האפליקציה?', text: 'המפתחות יימחקו מהטלפון. כדי להתחבר שוב צריך להדביק מפתח.', ok: 'ניתוק', danger: true }))) return;
-        for (const k of ['token', 'user', 'gcKey', 'blobs', 'paths']) store.del(k);
-        Object.assign(S, { token: '', user: null, gcKey: '', loaded: false, stats: null });
-        render();
-      } }, el('span', { class: 'link-text' }, el('b', { text: 'ניתוק' }), el('small', { text: 'מוחק את מפתחות הגישה מהטלפון' })), icon('close'))));
+      el('p', { class: 'muted', text: S.me && S.me.email ? `נכנסת בתור ${S.me.email}.` : 'נכנסת עם קוד למייל.' }),
+      el('button', { class: 'link-row', onclick: () => {
+        const v = prompt('השם שיופיע ליד השינויים שתעשה באתר:', S.name);
+        if (v == null) return;
+        S.name = v.trim() || (S.me ? str(S.me.email).replace(/@.*$/, '') : '');
+        store.set('myName', S.name);
+        paint();
+      } }, el('span', { class: 'link-text' }, el('b', { text: `השם בשינויים: ${S.name || '—'}` }), el('small', { text: 'נרשם ליד כל שינוי שנעשה מהאפליקציה' })), icon('edit')),
+      el('a', { class: 'link-row', href: '/cdn-cgi/access/logout' },
+        el('span', { class: 'link-text' }, el('b', { text: 'יציאה' }), el('small', { text: 'בכניסה הבאה יישלח קוד חדש למייל' })), icon('close')),
+      ext('https://one.dash.cloudflare.com/', 'מי יכול להיכנס', 'Cloudflare Zero Trust: כתובות המייל המורשות')));
 }
 
-// ------------------------------------------------------------------ setup (first run, or a token that stopped working)
-function setupView() {
-  const input = el('input', { type: 'password', class: 'field', placeholder: 'github_pat_…', dir: 'ltr', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'מפתח גישה ל-GitHub' });
-  const msg = el('p', { class: 'setup-msg', text: S.authError || '' });
-  const btn = el('button', { class: 'btn ink wide', onclick: async () => {
-    const token = input.value.trim();
-    if (!token) { input.focus(); return; }
-    btn.disabled = true;
-    msg.textContent = 'בודק את המפתח…';
-    try {
-      await gh(RP, { token });
-      // a harmless write check: an empty blob that nothing points to
-      await gh(`${RP}/git/blobs`, { method: 'POST', body: { content: '', encoding: 'utf-8' }, token });
-      const user = await gh('/user', { token }).catch(() => null);
-      S.token = token; S.authError = ''; store.set('token', token);
-      if (user) { S.user = { login: user.login, name: user.name || user.login }; store.set('user', S.user); }
-      render();
-      load();
-    } catch (e) {
-      msg.textContent = e.status === 401 ? 'GitHub לא מכיר את המפתח הזה. בדקו שהעתקתם את כולו.'
-        : (e.status === 403 || e.status === 404) ? 'המפתח עובד, אבל אין לו הרשאת כתיבה למאגר multiversesite. ביצירת המפתח בוחרים Only select repositories ואז multiversesite.'
-          : e.message;
-      btn.disabled = false;
-    }
-  } }, 'חיבור');
-  return el('div', { class: 'setup' },
-    el('div', { class: 'setup-cover' },
-      el('img', { src: 'icons/icon-192.png', alt: 'מולטיוורס', width: 88, height: 88 }),
-      el('h1', { text: 'ניהול מולטיוורס' }),
-      el('p', { text: 'תגובות, טיוטות, פרסום, הסוכן מפייסבוק והצפיות. הכול במקום אחד, בלי לחפש בין אתרים.' })),
-    el('section', { class: 'panel setup-card' },
-      el('h2', { text: S.authError ? 'צריך מפתח חדש' : 'חיבור חד-פעמי ל-GitHub' }),
+// ------------------------------------------------------------------ sign-in and one-time setup screens
+const CF_WORKERS = 'https://dash.cloudflare.com/?to=/:account/workers-and-pages';
+const CF_ZT = 'https://one.dash.cloudflare.com/';
+const link = (href, text) => el('a', { href, target: '_blank', rel: 'noopener', text });
+const ui = (text) => el('bdi', { class: 'ui', dir: 'ltr', text });              // a label on a Cloudflare/GitHub screen
+const pathOf = (...labels) => el('span', { class: 'ui-path' }, labels.map((t, k) => (k ? [el('span', { class: 'arr', text: ' ← ' }), ui(t)] : ui(t))));
+
+function blockView() {
+  const kind = S.block;
+  const again = el('button', { class: 'btn ink wide', onclick: () => location.reload() }, kind === 'signin' ? 'כניסה' : 'בדיקה שוב');
+  const cover = el('div', { class: 'setup-cover' },
+    el('img', { src: 'icons/icon-192.png', alt: 'מולטיוורס', width: 88, height: 88 }),
+    el('h1', { text: 'ניהול מולטיוורס' }),
+    el('p', { text: 'תגובות, טיוטות, פרסום, הסוכן מפייסבוק והצפיות. הכול במקום אחד, בלי לחפש בין אתרים.' }));
+  if (kind === 'signin') {
+    return el('div', { class: 'setup' }, cover, el('section', { class: 'panel setup-card' },
+      el('h2', { text: 'צריך להתחבר' }),
+      el('p', { text: 'הכניסה לאפליקציה פגה. בלחיצה על הכפתור ייפתח מסך הכניסה, ושם מקבלים קוד למייל.' }), again));
+  }
+  const accessDone = kind !== 'no_access';
+  const tokenDone = !['no_access', 'no_github_token', 'github_token_bad'].includes(kind);
+  const step = (n, title, done, current, body) => el('section', { class: `panel setup-card${done ? ' done' : ''}` },
+    el('h2', null, `${n}. ${title}`, done ? el('span', { class: 'step-ok' }, icon('check'), 'בוצע') : null),
+    current ? body : null);
+  const accessSteps = el('ol', { class: 'steps' },
+    el('li', null, 'פותחים את ', link(CF_ZT, 'Cloudflare Zero Trust'), '. בפעם הראשונה בוחרים שם לצוות ואת התוכנית החינמית ', ui('Free'), '.'),
+    el('li', null, 'יוצרים את רשימת המורשים: ', pathOf('Access controls', 'Policies', 'Add a policy'),
+      el('ul', { class: 'fields' },
+        el('li', null, ui('Policy name'), ' צוות מולטיוורס'),
+        el('li', null, ui('Action'), ' ', ui('Allow')),
+        el('li', null, pathOf('Include', 'Emails'), ' כתובות המייל של מי שמותר לו להיכנס, שלך ושל העוזרים'),
+        el('li', null, ui('Session duration'), ' חודש'))),
+    el('li', null, 'ב-', link(CF_WORKERS, 'Workers & Pages'), ': ', pathOf('multiverse-manage', 'Access', 'Protect this Worker behind Access'),
+      '. בוחרים ', ui('All traffic'), ' ואת "צוות מולטיוורס", ולוחצים ', ui('Apply Access'), '.'),
+    el('li', { text: 'חוזרים לכאן ולוחצים "בדיקה שוב". ייפתח מסך כניסה שבו מקבלים קוד למייל.' }));
+  const tokenSteps = el('ol', { class: 'steps' },
+    el('li', null, el('a', { class: 'btn primary small', href: TOKEN_URL, target: '_blank', rel: 'noopener' }, icon('external'), 'יצירת מפתח ב-GitHub'),
+      el('span', { class: 'step-note', text: 'השם וההרשאות כבר ממולאים.' })),
+    el('li', null, 'תחת ', ui('Repository access'), ' בוחרים ', pathOf('Only select repositories', 'multiversesite'), ', לוחצים ', ui('Generate token'), ' ומעתיקים את המפתח.'),
+    el('li', null, 'ב-', link(CF_WORKERS, 'Workers & Pages'), ': ', pathOf('multiverse-manage', 'Settings', 'Variables and Secrets', 'Add'),
+      el('ul', { class: 'fields' },
+        el('li', null, ui('Type'), ' ', ui('Secret')),
+        el('li', null, ui('Variable name'), ' ', ui('GITHUB_TOKEN')),
+        el('li', null, ui('Value'), ' המפתח שהעתקתם'),
+        el('li', null, 'ושומרים עם ', ui('Deploy')))),
+    el('li', { text: 'חוזרים לכאן ולוחצים "בדיקה שוב".' }));
+  const parts = [cover];
+  if (kind === 'access_needs_config') {
+    parts.push(el('section', { class: 'panel setup-card' },
+      el('h2', { text: 'עוד שתי הגדרות לכניסה' }),
+      el('p', { class: 'muted', text: 'הכניסה עם מייל פועלת, אבל השרת של האפליקציה צריך לדעת לזהות אותה.' }),
       el('ol', { class: 'steps' },
-        el('li', null, el('a', { class: 'btn primary small', href: TOKEN_URL, target: '_blank', rel: 'noopener' }, icon('external'), 'יצירת מפתח גישה'),
-          el('span', { class: 'step-note', text: 'השם וההרשאות כבר ממולאים.' })),
-        el('li', { text: 'בעמוד שנפתח, תחת Repository access בוחרים Only select repositories ואז multiversesite.' }),
-        el('li', { text: 'לוחצים Generate token ומעתיקים את המפתח.' }),
-        el('li', { text: 'מדביקים אותו כאן ולוחצים "חיבור".' })),
-      input, btn, msg,
-      el('p', { class: 'fine', text: 'המפתח נשמר רק בטלפון הזה ונשלח רק ל-GitHub. אפשר לבטל אותו בכל רגע בהגדרות של GitHub.' })),
-    isStandalone() ? null : el('section', { class: 'panel setup-card' },
+        el('li', null, 'ב-', link(CF_ZT, 'Zero Trust'), ': ', pathOf('Access controls', 'Applications', 'multiverse-manage'), ' ומעתיקים את ', ui('Application Audience (AUD) Tag'), '.'),
+        el('li', null, 'ב-Zero Trust ', pathOf('Settings'), ' מעתיקים את ', ui('Team domain'), ' (משהו כמו ', ui('name.cloudflareaccess.com'), ').'),
+        el('li', null, 'ב-', link(CF_WORKERS, 'Workers & Pages'), ': ', pathOf('multiverse-manage', 'Settings', 'Variables and Secrets'),
+          ' מוסיפים שני סודות מסוג ', ui('Secret'), ': ', ui('ACCESS_AUD'), ' ו-', ui('ACCESS_TEAM_DOMAIN'), '.')),
+      again));
+  } else {
+    parts.push(
+      el('p', { class: 'setup-lead', text: kind === 'github_token_bad' ? BLOCKS.github_token_bad : 'הגדרה של פעם אחת ב-Cloudflare, ואחריה כל מי שברשימה נכנס עם קוד למייל, בלי מפתחות בטלפון.' }),
+      step(1, 'כניסה עם מייל', accessDone, !accessDone, accessSteps),
+      step(2, 'המפתח של GitHub', tokenDone, accessDone && !tokenDone, tokenSteps),
+      again);
+  }
+  if (!isStandalone()) {
+    parts.push(el('section', { class: 'panel setup-card' },
       el('h2', { text: 'הוספה למסך הבית' }),
       el('p', { class: 'muted', text: 'באייפון: בספארי לוחצים על כפתור השיתוף ואז "הוספה למסך הבית". באנדרואיד: בכרום פותחים את התפריט ⋮ ובוחרים "הוספה למסך הבית". הסמל יהיה הלוגו של מולטיוורס.' })));
+  }
+  return el('div', { class: 'setup' }, parts);
 }
 
 // ------------------------------------------------------------------ new post
@@ -1354,7 +1406,7 @@ function openComposer() {
       const text = `---\n${fm}\n---\n${toHtml(body.value)}\n`;
       changes.unshift({ path, text });
       status.textContent = 'שומר באתר…';
-      await commitFiles(`${publish ? 'פוסט חדש' : 'טיוטה חדשה'}: ${st.title.slice(0, 80)} (מאפליקציית הניהול)`, async () => changes);
+      await commitFiles(`${publish ? 'פוסט חדש' : 'טיוטה חדשה'}: ${st.title.slice(0, 80)} ${byApp()}`, async () => changes);
       store.del('composer');
       store.set('lastAuthor', st.author);
       const post = { ...parsePost(text), path, file, when: parseLocal(`${t.Y}-${t.M}-${t.D} ${t.h}:${t.m}`), pendingPublish: publish };
@@ -1397,20 +1449,20 @@ function openComposer() {
 function route() {
   const h = location.hash.replace('#', '');
   if (h === 'new') {
-    if (S.token && !S.authError && S.loaded) openComposer();
+    if (!S.block && S.loaded) openComposer();
     else S.pendingNew = true;
     return;
   }
   const tab = TABS.some(([id]) => id === h) ? h : 'home';
   if (tab !== S.tab) { S.tab = tab; render(); window.scrollTo(0, 0); }
-  if (tab === 'stats' && S.gcKey && !S.stats && !S.statsLoading) loadStats();
+  if (tab === 'stats' && statsReady() && !S.stats && !S.statsLoading) loadStats();
 }
 
 window.addEventListener('hashchange', route);
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; paintIf('more'); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
-  if (S.token && Date.now() - S.loadedAt > 60e3) load({ quiet: true }); else watchRuns();
+  if (!S.block && Date.now() - S.loadedAt > 60e3) load({ quiet: true }); else watchRuns();
 });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1419,8 +1471,6 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
   const h = location.hash.replace('#', '');
   S.tab = TABS.some(([id]) => id === h) ? h : 'home';
   render();
-  if (S.token) {
-    await load();
-    if (h === 'new' || S.pendingNew) { S.pendingNew = false; if (S.loaded) openComposer(); }
-  }
+  await load();
+  if (h === 'new' || S.pendingNew) { S.pendingNew = false; if (S.loaded) openComposer(); }
 })();

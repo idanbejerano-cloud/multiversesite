@@ -269,7 +269,17 @@ select.field {
 .setup-cover h1 { font: 700 56px/.95 var(--display); margin: 14px 0 6px; }
 .setup-cover p { margin: 0; font-weight: 500; }
 .setup-card { display: grid; gap: 12px; }
-.setup-card h2 { margin-bottom: 0; }
+.setup-card h2 { margin-bottom: 0; display: flex; align-items: center; gap: 10px; }
+.setup-card.done { opacity: .75; }
+.step-ok { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: auto; font: 600 14px var(--body); color: var(--ok); }
+.step-ok .ic { width: 16px; height: 16px; }
+.ui { display: inline-block; padding: 0 6px; margin: 1px 0; border-radius: 5px; background: #1d1d1d; border: 1px solid #4a4a4a;
+  font: 500 14px/1.6 var(--body); color: var(--paper); white-space: nowrap; }
+.ui-path { line-height: 2; }
+.arr { color: var(--ember); font-weight: 700; }
+.fields { margin: 6px 0 0; padding: 0 16px 0 0; display: grid; gap: 4px; color: #d6d6d6; font-size: 15px; }
+.fields li::marker { color: #666; }
+.setup-lead { margin: 2px 2px 0; color: #d6d6d6; }
 .steps { margin: 0; padding: 0 20px 0 0; display: grid; gap: 10px; }
 .steps li::marker { font: 700 20px var(--display); color: var(--ember); }
 .step-note { display: block; color: var(--fog); font-size: 14px; margin-top: 4px; }

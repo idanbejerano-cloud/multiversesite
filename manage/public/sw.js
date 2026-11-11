@@ -1,7 +1,7 @@
-// Service worker of the management app (/manage/): keeps the app's own files so it opens
-// fast and still opens without a connection. Always tries the network first, so a new
-// version of the app shows up on the next open. Never touches GitHub, GoatCounter or the site.
-const CACHE = 'mv-manage-v1';
+// Service worker of the management app: keeps the app's own files so it opens fast and still
+// opens without a connection. Always tries the network first, so a new version of the app shows
+// up on the next open. Never touches /api/ (GitHub, GoatCounter) or Cloudflare Access (/cdn-cgi/).
+const CACHE = 'mv-manage-v2';
 const FILES = ['./', 'app.css', 'app.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png',
   'fonts/Karantina-Bold.woff', 'fonts/IBMPlexSansHebrew-Regular.woff', 'fonts/IBMPlexSansHebrew-Medium.woff',
   'fonts/IBMPlexSansHebrew-SemiBold.woff', 'fonts/IBMPlexSansHebrew-Bold.woff'];
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   const scope = new URL(self.registration.scope);
-  if (!url.pathname.startsWith(scope.pathname)) return;
+  if (!url.pathname.startsWith(scope.pathname) || /^\/(api|cdn-cgi)(\/|$)/.test(url.pathname)) return;
   e.respondWith(fetch(req).then((res) => {
     if (res.ok) {
       const copy = res.clone();
