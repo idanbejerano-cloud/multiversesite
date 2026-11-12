@@ -795,6 +795,7 @@ function topbar() {
     el('button', { class: `icon-btn${S.loading || S.statsLoading ? ' spin' : ''}`, 'aria-label': 'רענון', title: 'רענון', onclick: () => {
       load({ quiet: true });
       if (statsReady() && (S.tab === 'stats' || S.tab === 'home')) loadStats();
+      if (statsReady() && S.tab === 'stats') { S.sx.data = {}; S.sx.lists = {}; loadPeriod(S.sx.period, true); }
     } }, icon('refresh')));
 }
 
@@ -1103,9 +1104,223 @@ function commentCard(c, isPending) {
 }
 
 // ------------------------------------------------------------------ views: stats
+// ------------------------------------------------------------------ views: statistics in depth (GoatCounter)
+const PERIODS = [
+  { id: 'today', label: 'היום', days: 1, of: 'היום' },
+  { id: '7', label: '7 ימים', days: 7, of: 'ב-7 הימים האחרונים', prev: '7 הימים שלפני' },
+  { id: '30', label: '30 יום', days: 30, of: 'ב-30 הימים האחרונים', prev: '30 הימים שלפני' },
+  { id: '90', label: '90 יום', days: 90, of: 'ב-90 הימים האחרונים', prev: '90 הימים שלפני' },
+  { id: '365', label: 'שנה', days: 365, of: 'בשנה האחרונה', prev: 'השנה שלפני' },
+];
+const BREAKDOWNS = [
+  { id: 'pages', label: 'דפים', title: 'הדפים הנצפים ביותר' },
+  { id: 'toprefs', label: 'מקורות', title: 'מאיפה הגיעו הקוראים' },
+  { id: 'locations', label: 'מדינות', title: 'מאיזו מדינה' },
+  { id: 'sizes', label: 'מכשירים', title: 'מאיזה מכשיר' },
+  { id: 'browsers', label: 'דפדפנים', title: 'באיזה דפדפן' },
+  { id: 'systems', label: 'מערכות', title: 'באיזו מערכת הפעלה' },
+];
+S.sx = { period: PERIODS.some((x) => x.id === store.get('statsPeriod')) ? store.get('statsPeriod') : '30', tab: 'pages', data: {}, lists: {}, loading: false, error: '' };
+const periodOf = (id) => PERIODS.find((x) => x.id === id) || PERIODS[2];
+const fmt = (n) => Number(n || 0).toLocaleString('he-IL');
+
+function periodRange(p) {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (p.days - 1));
+  const end = new Date(Math.ceil((now.getTime() + 1) / 3600e3) * 3600e3);
+  const shift = p.days * 86400e3;                       // the same stretch, one period earlier, for comparison
+  return { start, end, prevStart: new Date(start.getTime() - shift), prevEnd: new Date(end.getTime() - shift) };
+}
+const rangeQuery = (r) => `start=${gcTime(r.start)}&end=${gcTime(r.end)}`;
+
+// GoatCounter groups days and hours in the timezone set in its settings; for "today" the hours are
+// moved to this phone's clock (shiftH = phone offset minus GoatCounter offset, in hours).
+function tzOffsetMinutes(zone, at = new Date()) {
+  try {
+    const m = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).formatToParts(at).map((x) => [x.type, x.value]));
+    return Math.round((Date.UTC(+m.year, m.month - 1, +m.day, +m.hour, +m.minute) - Math.floor(at.getTime() / 60000) * 60000) / 60000);
+  } catch { return 0; }
+}
+function zoneName(z) {
+  const v = typeof z === 'string' ? z : (z && (z.zone || z.Zone || z.name)) || '';
+  const name = /^[A-Z]{2}\./.test(v) ? v.slice(3) : v;
+  try { new Intl.DateTimeFormat('en-US', { timeZone: name || 'UTC' }); return name || 'UTC'; } catch { return 'UTC'; }
+}
+const shiftHours = () => Math.round((-new Date().getTimezoneOffset() - tzOffsetMinutes(S.sx.gcTz || 'UTC')) / 60);
+
+// Turns GoatCounter's per-day (and per-hour) numbers into the bars of one period:
+// hours for today, days up to 90 days, weeks for a year.
+function buckets(p, stats) {
+  const days = (stats || []).map((d) => ({ date: parseLocal(d.day), n: d.daily || 0, hourly: d.hourly || [] }))
+    .filter((d) => d.date).sort((a, b) => a.date - b.date);
+  const longDay = (d) => d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (p.id === 'today') {
+    const now = new Date();
+    const hours = new Array(24).fill(0);
+    const shift = shiftHours();
+    for (const d of days) {
+      d.hourly.forEach((v, h) => {
+        if (!v) return;
+        const t = new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), h + shift);
+        if (t.toDateString() === now.toDateString()) hours[t.getHours()] += v;
+      });
+    }
+    return Array.from({ length: now.getHours() + 1 }, (_, h) => ({ kind: 'hour', n: hours[h], short: `${h}:00`, long: `היום בין ${h}:00 ל-${h + 1}:00` }));
+  }
+  if (p.id === '365') {
+    const out = [];
+    for (let i = days.length; i > 0; i -= 7) {
+      const wk = days.slice(Math.max(0, i - 7), i);
+      out.unshift({ kind: 'week', n: wk.reduce((a, d) => a + d.n, 0), date: wk[0].date, short: dayMonth(wk[0].date), long: `השבוע שהתחיל ב-${dayMonth(wk[0].date)}` });
+    }
+    return out;
+  }
+  return days.map((d) => ({ kind: 'day', n: d.n, date: d.date, short: `${d.date.getDate()}.${d.date.getMonth() + 1}`, long: longDay(d.date) }));
+}
+
+async function loadPeriod(pid, force = false) {
+  const sx = S.sx;
+  if (!statsReady() || (!force && (sx.data[pid] || sx.loading))) return;
+  const p = periodOf(pid);
+  const r = periodRange(p);
+  sx.loading = true;
+  sx.error = '';
+  paintIf('stats');
+  try {
+    if (sx.gcTz == null) {
+      try { sx.gcTz = zoneName(((await gc('/me')).user || {}).settings?.timezone); } catch { sx.gcTz = 'UTC'; }
+    }
+    const [cur, prev] = await Promise.all([
+      gc(`/stats/total?${rangeQuery(r)}`),
+      gc(`/stats/total?start=${gcTime(r.prevStart)}&end=${gcTime(r.prevEnd)}`),
+    ]);
+    // The site started measuring in autumn 2026: a long period starts at the first day with numbers,
+    // and a year with only a few weeks of numbers is shown day by day.
+    let b = buckets(p, cur.stats);
+    let since = null;
+    if (p.days >= 30) {
+      const daily = buckets({ id: 'days' }, cur.stats);
+      const first = daily.findIndex((x) => x.n > 0);
+      if (first >= 7) {
+        since = daily[first].date;
+        const live = daily.slice(first);
+        b = p.id !== '365' || live.length <= 62 ? live : b.filter((x) => x.date.getTime() + 6 * 86400e3 >= since.getTime());
+      }
+    }
+    sx.data[pid] = { range: r, total: cur.total || 0, prev: prev.total || 0, buckets: b, since, at: Date.now() };
+  } catch (e) {
+    sx.error = e.message;
+  } finally {
+    sx.loading = false;
+    paintIf('stats');
+  }
+  if (sx.data[pid]) loadBreakdown(pid, sx.tab);
+}
+
+const REF_NAMES = [
+  [/(^|\.)facebook\.com$|(^|\.)fb\.(com|me)$|^fb\.watch$/, 'פייסבוק'], [/(^|\.)google\./, 'גוגל'], [/^google$/i, 'גוגל'],
+  [/(^|\.)(t\.co|x\.com|twitter\.com)$/, 'X (טוויטר)'], [/(^|\.)instagram\.com$/, 'אינסטגרם'], [/(^|\.)whatsapp\.com$|^wa\.me$/, 'וואטסאפ'],
+  [/(^|\.)youtube\.com$/, 'יוטיוב'], [/(^|\.)bing\.com$/, 'Bing'], [/(^|\.)duckduckgo\.com$/, 'DuckDuckGo'], [/(^|\.)reddit\.com$/, 'Reddit'],
+  [/(^|\.)t\.me$|(^|\.)telegram\.org$/, 'טלגרם'], [/(^|\.)linkedin\.com$|^lnkd\.in$/, 'לינקדאין'], [/(^|\.)multiversesite\.com$/, 'מולטיוורס עצמו'],
+];
+let regionNames = null;
+function regionName(code) {
+  try { regionNames = regionNames || new Intl.DisplayNames(['he'], { type: 'region' }); return regionNames.of(code.split('-')[0].toUpperCase()); } catch { return ''; }
+}
+const SIZE_NAMES = { phone: 'טלפון', tablet: 'טאבלט', desktop: 'מחשב', desktophd: 'מחשב עם מסך גדול', unknown: 'לא ידוע' };
+
+function itemFor(tab, x) {
+  const name = str(x.name);
+  if (tab === 'toprefs') {
+    if (!name) return { label: 'כניסה ישירה', sub: 'קישור שהוקלד, סימנייה, אפליקציה או מקור לא ידוע', n: x.count };
+    const host = name.replace(/^https?:\/\//, '').split('/')[0].toLowerCase();
+    const known = REF_NAMES.find(([re]) => re.test(host));
+    return { label: known ? known[1] : host, sub: known ? name : '', n: x.count, ltr: !known };
+  }
+  if (tab === 'locations') return { label: (x.id && regionName(str(x.id))) || (x.id ? name : '') || 'לא ידוע', n: x.count };
+  if (tab === 'sizes') return { label: SIZE_NAMES[x.id] || name || 'לא ידוע', n: x.count };
+  return { label: name || 'לא ידוע', n: x.count, ltr: Boolean(name) };
+}
+
+async function loadBreakdown(pid, tab, more = false) {
+  const sx = S.sx;
+  const key = `${pid}:${tab}`;
+  const data = sx.data[pid];
+  if (!data) return;
+  const entry = sx.lists[key] || (sx.lists[key] = { items: [], more: false, loading: false, error: '', done: false });
+  if (entry.loading || (entry.done && !more)) return;
+  entry.loading = true;
+  entry.error = '';
+  paintBreakdown();
+  try {
+    const q = rangeQuery(data.range);
+    if (tab === 'pages') {
+      const ex = entry.items.map((x) => x.pathId).join(',');
+      const res = await gc(`/stats/hits?${q}&limit=15${ex ? `&exclude_paths=${ex}` : ''}`);
+      entry.items.push(...(res.hits || []).filter((h) => !h.event).map((h) => ({
+        pathId: h.path_id, path: h.path, label: cleanTitle(h.title) || dec(h.path), sub: dec(h.path), n: h.count, stats: h.stats,
+      })));
+      entry.more = Boolean(res.more);
+    } else {
+      const res = await gc(`/stats/${tab}?${q}&limit=20&offset=${entry.items.length}`);
+      entry.items.push(...(res.stats || []).map((x) => itemFor(tab, x)).filter((x) => tab !== 'sizes' || x.n > 0));
+      entry.more = tab === 'sizes' ? false : Boolean(res.more);
+    }
+    entry.done = true;
+  } catch (e) {
+    entry.error = e.message;
+  } finally {
+    entry.loading = false;
+    paintBreakdown();
+  }
+}
+const paintBreakdown = () => { const b = $('#breakdown'); if (b && S.tab === 'stats') b.replaceWith(breakdownPanel()); };
+
+// A bar chart you can tap or drag across; the line above it says what the bar under the finger is.
+function chart(list, { height = 120, unit = 'צפיות' } = {}) {
+  const n = list.length;
+  const readout = el('p', { class: 'readout', 'aria-live': 'polite' });
+  const box = el('div', { class: 'chart', role: 'img', 'aria-label': `גרף של ${n} עמודות` });
+  let sel = n - 1;
+  const max = Math.max(1, ...list.map((b) => b.n));
+  const W = 300;
+  const bw = W / Math.max(n, 1);
+  const gap = n > 60 ? 0.6 : n > 20 ? 1.2 : 2.4;
+  function draw() {
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${height}" preserveAspectRatio="none">
+      <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fe6505"/><stop offset="1" stop-color="#d90e68"/></linearGradient></defs>
+      <line x1="0" x2="${W}" y1="${height - 0.5}" y2="${height - 0.5}" stroke="#4a4a4a" stroke-width="1"/>
+      ${list.map((b, k) => {
+    const h = b.n ? Math.max(2, (b.n / max) * (height - 6)) : 0;
+    const x = (n - 1 - k) * bw;                          // right to left: the oldest bar on the right
+    return `<rect x="${(x + gap / 2).toFixed(2)}" y="${(height - h).toFixed(2)}" width="${Math.max(0.6, bw - gap).toFixed(2)}" height="${h.toFixed(2)}" rx="${bw > 6 ? 1.5 : 0}" fill="${k === sel ? 'url(#cg)' : 'currentColor'}"/>`;
+  }).join('')}</svg>`;
+    const b = list[sel];
+    readout.replaceChildren(b ? el('span', null, el('b', { text: fmt(b.n) }), ` ${unit}, ${b.long}`) : '');
+  }
+  const pick = (e) => {
+    const r = box.getBoundingClientRect();
+    const col = Math.floor(((e.clientX - r.left) / r.width) * n);
+    const k = Math.min(n - 1, Math.max(0, n - 1 - col));
+    if (k !== sel) { sel = k; draw(); }
+  };
+  box.addEventListener('pointerdown', (e) => { pick(e); box.setPointerCapture?.(e.pointerId); });
+  box.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') pick(e); });
+  draw();
+  return el('div', { class: 'chart-wrap' }, readout, box,
+    el('div', { class: 'axis' }, el('small', { text: list[0] ? list[0].short : '' }), el('small', { text: list[n - 1] ? list[n - 1].short : '' })));
+}
+
 function statsView() {
+  const sx = S.sx;
+  const p = periodOf(sx.period);
+  const data = sx.data[sx.period];
   const page = el('div', { class: 'page' }, el('div', { class: 'page-head' }, el('h1', { text: 'צפיות' }),
-    S.stats ? el('small', { class: 'muted', text: `עודכן ${ago(new Date(S.stats.at))}` }) : null));
+    data ? el('small', { class: 'muted', text: `עודכן ${ago(new Date(data.at))}` }) : null));
   if (!statsReady()) {
     page.append(el('section', { class: 'panel setup-card' },
       el('h2', { text: 'הסטטיסטיקות עוד לא מחוברות' }),
@@ -1114,29 +1329,112 @@ function statsView() {
     page.append(topListPanel());
     return page;
   }
-  const s = S.stats;
-  if (!s) {
-    page.append(S.statsError ? el('section', { class: 'panel error-card' }, el('p', { text: S.statsError }), el('button', { class: 'btn primary', onclick: () => loadStats() }, 'לנסות שוב'))
+  if (!data && !sx.loading && !sx.error) setTimeout(() => loadPeriod(sx.period), 0);
+
+  page.append(el('div', { class: 'seg periods', role: 'tablist', 'aria-label': 'תקופה' }, PERIODS.map((x) => el('button', {
+    class: x.id === sx.period ? 'on' : '', role: 'tab', 'aria-selected': x.id === sx.period ? 'true' : 'false',
+    onclick: () => { if (sx.period === x.id) return; sx.period = x.id; store.set('statsPeriod', x.id); paint(); loadPeriod(x.id); },
+  }, x.label))));
+
+  if (!data) {
+    page.append(sx.error
+      ? el('section', { class: 'panel error-card' }, el('p', { text: sx.error }), el('button', { class: 'btn primary', onclick: () => loadPeriod(sx.period, true) }, 'לנסות שוב'))
       : el('div', { class: 'loading-inline' }, el('div', { class: 'spinner small' }), 'טוען מ-GoatCounter…'));
     return page;
   }
-  page.append(
-    el('section', { class: 'panel stats-hero' },
-      el('div', { class: 'stat-row big' },
-        el('div', null, el('b', { class: 'num', text: s.today.toLocaleString('he-IL') }), el('small', { text: 'היום' })),
-        el('div', null, el('b', { class: 'num', text: s.week.toLocaleString('he-IL') }), el('small', { text: '7 ימים' })),
-        el('div', null, el('b', { class: 'num', text: s.total.toLocaleString('he-IL') }), el('small', { text: '30 יום' }))),
-      bars(s.days, { height: 96 }),
-      el('div', { class: 'axis' }, el('small', { text: s.days[0] ? dayMonth(new Date(s.days[0].day)) : '' }), el('small', { text: 'היום' }))),
-    el('section', { class: 'panel' },
-      el('h2', { text: 'הכי נקראים השבוע' }),
-      s.top.length ? el('ol', { class: 'top-list' }, s.top.map((h) => el('li', null,
-        el('a', { href: siteUrl(h.path), target: '_blank', rel: 'noopener' }, el('span', { class: 'clamp2', text: cleanTitle(h.title) || dec(h.path) })),
-        el('b', { class: 'num', text: h.n.toLocaleString('he-IL') })))) : el('p', { class: 'muted', text: 'עוד אין צפיות השבוע.' })),
-    el('section', { class: 'panel links' },
-      ext(GC, 'הלוח המלא ב-GoatCounter', 'מקורות תנועה, מדינות, דפדפנים'),
-      ext('https://dash.cloudflare.com/?to=/:account/web-analytics', 'Cloudflare Web Analytics', 'מדידה שנייה של הכניסות')));
+
+  // the period in numbers
+  const b = data.buckets;
+  const peak = b.reduce((m, x) => (x.n > (m ? m.n : -1) ? x : m), null);
+  let delta = null;
+  if (p.prev !== undefined || p.id === 'today') {
+    if (data.prev > 0) delta = Math.round(((data.total - data.prev) / data.prev) * 100);
+  }
+  const prevLabel = p.id === 'today' ? 'אתמול עד אותה שעה' : p.prev;
+  const elapsedDays = Math.max(1, data.since ? Math.round((Date.now() - data.since) / 86400e3) : p.days);
+  page.append(el('section', { class: 'panel stats-summary' },
+    el('div', { class: 'sum-main' },
+      el('b', { class: 'num huge', text: fmt(data.total) }),
+      el('span', { class: 'sum-of', text: `צפיות ${p.of}` })),
+    delta == null
+      ? el('p', { class: 'delta flat', text: data.prev ? '' : 'אין עדיין נתונים להשוואה עם התקופה הקודמת' })
+      : el('p', { class: `delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}` },
+        el('b', { text: `${delta > 0 ? '▲' : delta < 0 ? '▼' : '='} ${Math.abs(delta)}%` }), ` לעומת ${prevLabel} (${fmt(data.prev)})`),
+    el('div', { class: 'stat-row' },
+      p.id !== 'today' ? el('div', null, el('b', { class: 'num', text: fmt(Math.round(data.total / elapsedDays)) }), el('small', { text: 'בממוצע ליום' })) : null,
+      peak && peak.n ? el('div', null, el('b', { class: 'num', text: fmt(peak.n) }), el('small', { text: `השיא: ${peak.kind === 'hour' ? `ב-${peak.short}` : peak.kind === 'week' ? `בשבוע של ${dayMonth(peak.date)}` : dayMonth(peak.date)}` })) : null),
+    b.length ? chart(b, { height: 120 }) : null,
+    data.since ? el('p', { class: 'muted small-note', text: `המדידה באתר התחילה ב-${dayMonth(data.since)}, אז הגרף מתחיל משם.` }) : null));
+
+  page.append(breakdownPanel());
+  page.append(el('section', { class: 'panel links' },
+    ext(GC, 'הלוח המלא ב-GoatCounter', 'עוד פילוחים, ייצוא נתונים והגדרות'),
+    ext('https://dash.cloudflare.com/?to=/:account/web-analytics', 'Cloudflare Web Analytics', 'מדידה שנייה של הכניסות')));
   return page;
+}
+
+function breakdownPanel() {
+  const sx = S.sx;
+  const data = sx.data[sx.period];
+  const tab = BREAKDOWNS.find((x) => x.id === sx.tab) || BREAKDOWNS[0];
+  const entry = sx.lists[`${sx.period}:${tab.id}`];
+  if (data && !entry) setTimeout(() => loadBreakdown(sx.period, tab.id), 0);
+  const items = entry ? entry.items : [];
+  const max = Math.max(1, ...items.map((x) => x.n));
+  const total = data ? data.total : 0;
+  return el('section', { class: 'panel breakdown', id: 'breakdown' },
+    el('div', { class: 'chip-row', role: 'tablist', 'aria-label': 'פילוח' }, BREAKDOWNS.map((x) => el('button', {
+      class: `chip${x.id === tab.id ? ' on' : ''}`, role: 'tab', 'aria-selected': x.id === tab.id ? 'true' : 'false',
+      onclick: () => { sx.tab = x.id; paintBreakdown(); loadBreakdown(sx.period, x.id); },
+    }, x.label))),
+    el('h2', { text: tab.title }),
+    entry && entry.error ? el('p', { class: 'muted', text: entry.error }) : null,
+    items.length ? el('ol', { class: 'bd-list' }, items.map((it) => {
+      const pct = total && tab.id !== 'pages' ? Math.round((it.n / total) * 100) : null;
+      const inner = [
+        el('span', { class: 'bd-text' },
+          it.ltr ? el('bdi', { class: 'bd-label', dir: 'ltr', text: it.label }) : el('span', { class: 'bd-label clamp2', text: it.label }),
+          it.sub ? el('bdi', { class: 'bd-sub', dir: tab.id === 'pages' || tab.id === 'toprefs' ? 'ltr' : null, text: it.sub }) : null),
+        el('span', { class: 'bd-num' }, el('b', { text: fmt(it.n) }), pct != null ? el('small', { text: pct < 1 && it.n > 0 ? 'פחות מ-1%' : `${Math.min(100, pct)}%` }) : null),
+        el('span', { class: 'bd-bar', 'aria-hidden': 'true' }, el('i', { style: null })),
+      ];
+      const row = tab.id === 'pages'
+        ? el('button', { class: 'bd-row tappable', onclick: () => openPageStats(it) }, inner)
+        : el('div', { class: 'bd-row' }, inner);
+      row.querySelector('.bd-bar i').style.width = `${Math.max(1.5, (it.n / max) * 100)}%`;
+      return el('li', null, row);
+    })) : (entry && entry.done && !entry.loading ? el('p', { class: 'empty', text: 'אין נתונים לתקופה הזאת.' }) : null),
+    entry && entry.loading ? el('div', { class: 'loading-inline' }, el('div', { class: 'spinner small' }), 'טוען…') : null,
+    entry && entry.more && !entry.loading ? el('button', { class: 'btn ghost wide', onclick: () => loadBreakdown(sx.period, tab.id, true) }, 'עוד') : null,
+    tab.id === 'pages' && items.length ? el('p', { class: 'muted small-note', text: 'לחיצה על דף מראה את הגרף שלו ומאיפה הגיעו אליו.' }) : null);
+}
+
+function openPageStats(it) {
+  const sx = S.sx;
+  const p = periodOf(sx.period);
+  const data = sx.data[sx.period];
+  let b = buckets(p, it.stats);
+  if (data && data.since) b = b.filter((x) => !x.date || x.date >= data.since);
+  const refs = el('div', { class: 'loading-inline' }, el('div', { class: 'spinner small' }), 'טוען מקורות…');
+  openSheet(el('div', { class: 'sheet-body' },
+    el('div', { class: 'sheet-head' }, el('h3', { text: it.label }), el('bdi', { class: 'muted page-path', dir: 'ltr', text: it.sub })),
+    el('p', { class: 'sum-main' }, el('b', { class: 'num huge', text: fmt(it.n) }), el('span', { class: 'sum-of', text: `צפיות ${p.of}` })),
+    b.length > 1 ? chart(b, { height: 90 }) : null,
+    el('h4', { class: 'sheet-sub', text: 'מאיפה הגיעו לדף הזה' }),
+    refs,
+    el('a', { class: 'btn ghost wide', href: siteUrl(it.path), target: '_blank', rel: 'noopener' }, icon('eye'), 'פתיחה באתר')));
+  gc(`/stats/hits/${it.pathId}?${rangeQuery(data.range)}&limit=10`).then((res) => {
+    const list = (res.refs || []).map((x) => itemFor('toprefs', x));
+    const max = Math.max(1, ...list.map((x) => x.n));
+    refs.replaceWith(list.length ? el('ol', { class: 'bd-list' }, list.map((x) => {
+      const row = el('div', { class: 'bd-row' },
+        el('span', { class: 'bd-text' }, x.ltr ? el('bdi', { class: 'bd-label', dir: 'ltr', text: x.label }) : el('span', { class: 'bd-label', text: x.label })),
+        el('span', { class: 'bd-num' }, el('b', { text: fmt(x.n) })),
+        el('span', { class: 'bd-bar', 'aria-hidden': 'true' }, el('i')));
+      row.querySelector('.bd-bar i').style.width = `${Math.max(1.5, (x.n / max) * 100)}%`;
+      return el('li', null, row);
+    })) : el('p', { class: 'muted', text: 'אין נתוני מקורות לדף הזה בתקופה.' }));
+  }).catch((e) => refs.replaceWith(el('p', { class: 'muted', text: e.message })));
 }
 const cleanTitle = (t) => str(t).replace(/\s*[|–-]\s*מולטיוורס\s*$/, '');
 
@@ -1455,7 +1753,7 @@ function route() {
   }
   const tab = TABS.some(([id]) => id === h) ? h : 'home';
   if (tab !== S.tab) { S.tab = tab; render(); window.scrollTo(0, 0); }
-  if (tab === 'stats' && statsReady() && !S.stats && !S.statsLoading) loadStats();
+  if (tab === 'stats' && statsReady()) loadPeriod(S.sx.period);
 }
 
 window.addEventListener('hashchange', route);
