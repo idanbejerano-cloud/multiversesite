@@ -1,0 +1,32 @@
+# Temporary: checks from outside whether the management app answers. Deleted right after.
+name: Diagnose management app (temporary)
+on:
+  push:
+    branches: ['diag/**']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reach the app from outside
+        run: |
+          H=multiverse-manage.multiversesite.workers.dev
+          getent hosts $H || echo "DNS: no answer"
+          for p in / /sw.js /app.js /api/me; do
+            curl -sS -o /tmp/body -D /tmp/head -m 25 -w "== $p -> %{http_code} (%{time_total}s) redirect=%{redirect_url}\n" "https://$H$p" || echo "== $p -> FAILED"
+            grep -i -E "^(location|content-type|server|cache-control):" /tmp/head || true
+            head -c 160 /tmp/body | tr '\n' ' '; echo
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Worker status in Cloudflare
+        working-directory: manage
+        run: |
+          node bundle.mjs >/dev/null
+          npx --yes wrangler@4 deployments list 2>&1 | tail -12 || true
+          npx --yes wrangler@4 secret list 2>&1 | grep -o '"name": *"[A-Z_]*"' || true
+          curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/multiverse-manage/subdomain" | head -c 300; echo
