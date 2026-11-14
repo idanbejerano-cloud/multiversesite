@@ -318,7 +318,9 @@ async function apiFetch(url, init = {}) {
   try {
     res = await fetch(url, { ...init, cache: 'no-store', redirect: 'manual', credentials: 'same-origin' });
   } catch {
-    throw new ApiError(0, 'אין חיבור לאינטרנט, או שהשרת לא עונה. נסו שוב בעוד רגע.');
+    throw new ApiError(0, navigator.onLine === false
+      ? 'אין חיבור לאינטרנט. נסו שוב כשהחיבור יחזור.'
+      : 'הטלפון מחובר לאינטרנט, אבל לא מצליח להגיע לשרת של האפליקציה. "פתיחה מחדש" טוענת אותה מהתחלה; אם זה לא עוזר, נסו לעבור בין Wi-Fi לנתונים סלולריים.');
   }
   if (res.type === 'opaqueredirect' || res.status === 0) throw block('signin');     // Access wants a new sign-in
   return res;
@@ -809,7 +811,10 @@ function tabbar() {
 function errorCard(msg) {
   return el('div', { class: 'panel error-card' },
     el('h3', { text: 'משהו לא נטען' }), el('p', { text: msg }),
-    el('button', { class: 'btn primary', onclick: () => load() }, icon('refresh'), 'לנסות שוב'));
+    el('div', { class: 'row-actions' },
+      el('button', { class: 'btn primary', onclick: () => load() }, icon('refresh'), 'לנסות שוב'),
+      // a full page load: shows the sign-in page if it's needed, or the browser's own error if the address can't be reached
+      el('button', { class: 'btn ghost', onclick: () => location.replace(`${location.pathname}?r=${Date.now()}`) }, 'פתיחה מחדש')));
 }
 
 const ext = (href, label, sub, ic = 'external') => el('a', { class: 'link-row', href: safeUrl(href), target: '_blank', rel: 'noopener' },
