@@ -1,5 +1,5 @@
 # Publishes the management app (manage/) to Cloudflare Workers:
-# https://multiverse-manage.multiversesite.workers.dev/ – see manage/README.md.
+# https://app.multiversesite.com/ – see manage/README.md.
 name: Deploy management app
 
 on:

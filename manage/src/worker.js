@@ -15,6 +15,7 @@
 import ASSETS from './assets.js';
 
 const OWNER = 'idanbejerano-cloud';
+const HOME = 'app.multiversesite.com';     // the app's address; the old workers.dev one sends pages here
 const REPO = 'multiversesite';
 const GC_API = 'https://multiversesite.goatcounter.com/api/v0';
 
@@ -32,6 +33,12 @@ const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; font-src '
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Pages opened at the old *.workers.dev address (blocked by some mobile carriers) move to the
+    // app's own address. The API and the service worker stay, so pages already open keep working.
+    if (url.hostname.endsWith('.workers.dev') && request.method === 'GET' && url.pathname !== '/sw.js'
+      && !url.pathname.startsWith('/api') && (request.headers.get('Accept') || '').includes('text/html')) {
+      return new Response(null, { status: 302, headers: { ...SECURITY_HEADERS, Location: `https://${HOME}${url.pathname}${url.search}`, 'Cache-Control': 'no-store' } });
+    }
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       try {
         return await api(request, env, ctx, url);

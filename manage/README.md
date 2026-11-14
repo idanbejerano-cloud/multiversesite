@@ -2,7 +2,8 @@
 
 אפליקציית ווב (PWA) לניהול האתר מהטלפון, עם הלוגו של מולטיוורס כסמל במסך הבית.
 
-**הכתובת:** https://multiverse-manage.multiversesite.workers.dev/ (וגם `multiversesite.com/manage/` מעביר אליה).
+**הכתובת:** https://app.multiversesite.com/ (וגם `multiversesite.com/manage/` מעביר אליה). הכתובת הישנה,
+multiverse-manage.multiversesite.workers.dev, מעבירה לחדשה; חלק מספקי הסלולר חוסמים כתובות workers.dev.
 
 נכנסים עם קוד שנשלח למייל (Cloudflare Access), רק מי שהמייל שלו ברשימה. אף אחד לא שומר מפתח בטלפון:
 המפתח של GitHub והמפתח של GoatCounter שמורים פעם אחת ב-Cloudflare.
