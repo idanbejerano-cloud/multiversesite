@@ -1,5 +1,5 @@
 # The management app (ניהול מולטיוורס) – a Cloudflare Worker (free plan) that serves the app and
-# talks to GitHub and GoatCounter for it. It lives on its own address, apart from multiversesite.com.
+# talks to GitHub and GoatCounter for it, at https://app.multiversesite.com/ (and the older workers.dev address).
 # Sign-in: Cloudflare Access (Workers & Pages > multiverse-manage > Access), email code.
 # Secrets, set once in the Cloudflare dashboard (Settings > Variables and Secrets):
 #   GITHUB_TOKEN           fine-grained token for idanbejerano-cloud/multiversesite (Contents + Actions: read and write)
@@ -10,3 +10,9 @@ name = "multiverse-manage"
 main = "src/worker.js"
 compatibility_date = "2026-01-15"
 workers_dev = true
+
+# The app's own address on the site's domain (multiversesite.com's DNS is on Cloudflare since
+# 14.11.2026). Some mobile carriers block *.workers.dev; this address isn't blocked.
+[[routes]]
+pattern = "app.multiversesite.com"
+custom_domain = true
