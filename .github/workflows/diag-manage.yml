@@ -6,27 +6,21 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Reach the app from outside
+      - name: Google Safe Browsing status
+        run: |
+          for h in multiverse-manage.multiversesite.workers.dev multiversesite.workers.dev multiverse-site.cloudflareaccess.com multiversesite.com; do
+            echo "== $h"; curl -sS -m 20 "https://transparencyreport.google.com/transparencyreport/api/v3/safebrowsing/status?site=$h" | tail -c 300; echo
+          done
+      - name: Reachability from Israel (check-host.net)
         run: |
           H=multiverse-manage.multiversesite.workers.dev
-          getent hosts $H || echo "DNS: no answer"
-          for p in / /sw.js /app.js /api/me; do
-            curl -sS -o /tmp/body -D /tmp/head -m 25 -w "== $p -> %{http_code} (%{time_total}s) redirect=%{redirect_url}\n" "https://$H$p" || echo "== $p -> FAILED"
-            grep -i -E "^(location|content-type|server|cache-control):" /tmp/head || true
-            head -c 160 /tmp/body | tr '\n' ' '; echo
-          done
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Worker status in Cloudflare
-        working-directory: manage
-        run: |
-          node bundle.mjs >/dev/null
-          npx --yes wrangler@4 deployments list 2>&1 | tail -12 || true
-          npx --yes wrangler@4 secret list 2>&1 | grep -o '"name": *"[A-Z_]*"' || true
-          curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/multiverse-manage/subdomain" | head -c 300; echo
+          curl -sS -m 20 -H 'Accept: application/json' "https://check-host.net/check-http?host=https://$H/&max_nodes=50" > /tmp/req.json || true
+          rid=$(python3 -c 'import json; print(json.load(open("/tmp/req.json"))["request_id"])' || echo none)
+          python3 -c 'import json; d=json.load(open("/tmp/req.json")); [print("node", k, v[0], v[2]) for k,v in d["nodes"].items()]' | grep -i -E " il | israel|tel aviv|jerusalem|haifa" || echo "no Israeli node in this run"
+          sleep 25
+          curl -sS -m 20 -H 'Accept: application/json' "https://check-host.net/check-result/$rid" | python3 -c 'import sys,json; d=json.load(sys.stdin); [print(k, json.dumps(v)[:170]) for k,v in d.items()]'
+          curl -sS -m 20 -H 'Accept: application/json' "https://check-host.net/check-dns?host=$H&max_nodes=50" > /tmp/dreq.json || true
+          did=$(python3 -c 'import json; print(json.load(open("/tmp/dreq.json"))["request_id"])' || echo none)
+          sleep 15
+          curl -sS -m 20 -H 'Accept: application/json' "https://check-host.net/check-result/$did" | python3 -c 'import sys,json; d=json.load(sys.stdin); [print("dns", k, json.dumps(v)[:200]) for k,v in d.items() if k[:2] in ("il","de","us","fr")]'
