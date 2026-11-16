@@ -83,41 +83,7 @@ content:
       - name: galpl
         label: גל פלודה
       - name: talmichels
-        label: Tal_Michels
-      - name: cundason
-        label: cundason
-      - name: nitzangel
-        label: ניצן ניקי מור
-      - name: alonshafir
-        label: אלון שפיר
-      - name: yehezkelsagiv
-        label: yehezkelsagiv
-      - name: benaya33
-        label: בניה שגיב
-      - name: brdroey
-        label: רועי ברדה
-      - name: shabso
-        label: שי גבסו
-      - name: hadarperry93
-        label: hadarperry93
-      - name: idangueta
-        label: idangueta
-      - name: naamashtein
-        label: naamashtein
-      - name: nattya01
-        label: nattya01
-      - name: lipaavihaybob
-        label: אביחי בוב
-      - name: talmalka
-        label: talmalka
-      - name: tomersoiker
-        label: Tomer Soiker
-      - name: adiperl
-        label: עדי פרל
-      - name: dorshilton
-        label: dorshilton
-      - name: yanaybn
-        label: ינאי בן נח
+        label: טל מיכלס
       # END authors
     description: אם הכותב לא ברשימה, השאירו ריק ומלאו את "שם כותב אחר".
   - name: author_name
