@@ -401,6 +401,33 @@ bdi.bd-label { white-space: nowrap; text-align: start; }
 .more-opts[open] { display: grid; gap: 12px; }
 .composer-foot { border-top: 2px solid var(--ink); background: #222; padding: 10px 16px calc(var(--bottom) + 12px); }
 .composer-foot .row-actions { margin: 0; max-width: 608px; margin-inline: auto; }
+.blocks { display: grid; gap: 12px; }
+.blocks .body-field { min-height: 96px; }
+.blocks .body-field.only { min-height: 220px; }
+.blk-media { border: 2px solid #444; border-radius: 8px; background: #1d1d1d; overflow: hidden; }
+.blk-preview { position: relative; background: #111; min-height: 80px; }
+.blk-preview img { display: block; width: 100%; max-height: 300px; object-fit: contain; }
+.blk-play {
+  position: absolute; inset: 0; margin: auto; width: 62px; height: 44px; border-radius: 12px;
+  background: rgba(0, 0, 0, .78); display: grid; place-items: center; color: #fff;
+}
+.blk-play .ic { width: 24px; height: 24px; }
+.mini-spin-wrap { display: grid; place-items: center; min-height: 120px; }
+.blk-row { display: flex; align-items: center; gap: 4px; padding: 8px; }
+.blk-row .field { flex: 1; min-width: 0; min-height: 42px; padding-block: 8px; }
+.blk-kind { color: var(--ember); display: grid; place-items: center; padding-inline: 4px; }
+.blk-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fog); font-size: 13.5px; text-align: start; }
+.blk-tools { display: flex; flex: none; }
+.blk-tools .icon-btn { width: 40px; height: 40px; }
+.blk-tools .icon-btn:disabled { opacity: .3; }
+.insert-bar { display: flex; align-items: center; gap: 8px; max-width: 608px; margin: 0 auto 10px; }
+.insert-bar > span { color: var(--fog); font-size: 13.5px; font-weight: 600; margin-inline-end: auto; }
+.video-ask { display: grid; gap: 12px; }
+.video-ask-row { display: flex; gap: 8px; }
+.video-ask-row .field { flex: 1; min-width: 0; }
+.video-ask-preview .blk-preview { border-radius: 8px; overflow: hidden; }
+.video-ask-preview p { margin: 0; }
+.video-ask .bad-text, .bad-text { color: var(--bad); }
 .compose-status { margin: 0 0 8px; color: var(--ember); font-size: 14px; text-align: center; }
 .compose-status:empty { display: none; }
 

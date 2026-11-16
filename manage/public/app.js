@@ -96,6 +96,10 @@ const ICONS = {
   image: '<rect x="3" y="4.5" width="18" height="15" rx="1.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8.5 8.5"/>',
   hide: '<path d="M3 3l18 18"/><path d="M10.6 5.6A9.6 9.6 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a17 17 0 0 1-3.2 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.6 6.5 10 6.5a9.4 9.4 0 0 0 4.4-1.1"/>',
   bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  video: '<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
+  play: '<path d="M8 5.5v13L19 12z" fill="currentColor"/>',
   link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
 };
 const icon = (name, cls = '') => el('span', { class: `ic ${cls}`, 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[name] || ''}</svg>` });
@@ -690,6 +694,37 @@ async function publishPost(post, action) {
   setTimeout(() => load({ quiet: true }), 75e3);
 }
 
+// Deletes the post's file in one commit, with the comments that belong to a published post.
+async function deletePost(post) {
+  const path = await resolvePath(post);
+  if (!path) throw new Error('לא מצאתי את הקובץ של הפוסט במאגר.');
+  const wasDraft = post.draft;
+  const same = (u) => u && post.url && (u === post.url || dec(u) === dec(post.url));
+  const commentFiles = wasDraft ? [] : S.comments.filter((c) => same(str(c.post_url))).map((c) => c.path);
+  const done = await commitFiles(`${wasDraft ? 'מחיקת טיוטה' : 'מחיקת פוסט'}: ${str(post.title).slice(0, 80) || 'בלי כותרת'} ${byApp()}`, async (head) => {
+    const text = await readFile(path, head);
+    if (text == null) return [];
+    const out = [{ path, remove: true }];
+    if (!wasDraft) {
+      const m = FM_RE.exec(text);
+      let id = '';
+      try { id = str((parseYAML(m ? m[1] : '') || {}).id); } catch { /* no id */ }
+      const extra = [...commentFiles, ...(/^\d+$/.test(id) ? [`content/comments/${id}.json`] : [])];
+      for (const f of extra) if ((await readFile(f, head)) != null) out.push({ path: f, remove: true });
+    }
+    return out;
+  });
+  if (!done) throw new Error('הפוסט כבר לא נמצא במאגר. אולי מישהו מחק או העביר אותו קודם.');
+  S.posts = S.posts.filter((x) => x !== post && x.path !== path);
+  if (S.index) S.index = S.index.filter((x) => !same(x.url));
+  S.comments = S.comments.filter((c) => !commentFiles.includes(c.path));
+  setBadge();
+  if (wasDraft) { toast('הטיוטה נמחקה.'); return; }
+  toast('הפוסט נמחק. הוא ירד מהאתר בעוד כ-3 דקות.');
+  S.watchUntil = Date.now() + 180e3;
+  setTimeout(() => { refreshRuns(); watchRuns(); }, 4000);
+}
+
 async function rebuildSite() {
   await dispatch('deploy.yml');
   toast('בניית האתר התחילה. זה לוקח בערך 3 דקות.');
@@ -1043,6 +1078,15 @@ function openPost(p) {
     resolvePath(p).then((path) => { p.path = path; cmsBtn.replaceWith(path ? cmsLink(path) : el('span', { class: 'btn ghost wide', 'aria-disabled': 'true' }, 'לא מצאתי את הקובץ לעריכה')); })
       .catch(() => cmsBtn.replaceWith(el('a', { class: 'btn ghost wide', href: `${CMS}/collection/posts`, target: '_blank', rel: 'noopener' }, icon('edit'), 'לרשימת הפוסטים ב-Pages CMS')));
   }
+  const name = p.title || 'בלי כותרת';
+  const deleteBtn = el('button', { class: 'btn ghost wide danger-text', onclick: async () => {
+    const ok = await confirmSheet(p.draft
+      ? { title: 'למחוק את הטיוטה?', text: `"${name}" תימחק לגמרי. אי אפשר לבטל את זה מהאפליקציה.`, ok: 'מחיקה', danger: true }
+      : { title: 'למחוק את הפוסט לצמיתות?', text: `"${name}" יימחק מהאתר יחד עם התגובות שלו, והקישורים אליו יפסיקו לעבוד. אי אפשר לבטל את זה מהאפליקציה. כדי רק להוריד אותו מהאתר ולשמור אותו, עדיף "החזרה לטיוטה".`, ok: 'מחיקה לצמיתות', danger: true });
+    if (!ok) return;
+    close();
+    busy('delete', () => deletePost(p));
+  } }, icon('trash'), p.draft ? 'מחיקת הטיוטה' : 'מחיקת הפוסט');
   const actions = p.draft
     ? [
       el('button', { class: 'btn primary wide', onclick: async () => {
@@ -1051,6 +1095,7 @@ function openPost(p) {
         busy('publish', () => publishPost(p, 'publish'));
       } }, icon('send'), 'פרסום באתר'),
       cmsBtn,
+      deleteBtn,
     ]
     : [
       el('a', { class: 'btn primary wide', href: siteUrl(p.url), target: '_blank', rel: 'noopener' }, icon('eye'), 'צפייה באתר'),
@@ -1061,6 +1106,7 @@ function openPost(p) {
         close();
         busy('publish', () => publishPost(p, 'unpublish'));
       } }, icon('undo'), 'החזרה לטיוטה'),
+      deleteBtn,
     ];
   const meta = [p.path ? authorName(p.author, p.authorName) : '', p.when ? dayMonth(p.when) : ''].filter(Boolean).join(', ');
   close = openSheet(el('div', { class: 'sheet-body' },
@@ -1600,12 +1646,40 @@ function toHtml(text) {
   }).join('\n');
 }
 
-async function prepareImage(file) {
-  if (file.type === 'image/gif') return { bytes: new Uint8Array(await file.arrayBuffer()), ext: 'gif' };
+// Pictures picked in the composer wait in IndexedDB until the post is saved, so a half-written post
+// keeps them when the app is closed. Without IndexedDB they live in memory only.
+const pics = (() => {
+  let db = null;
+  const open = () => db || (db = new Promise((res, rej) => {
+    const r = indexedDB.open('mv-manage', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('pics');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+  const run = async (mode, fn) => {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const tx = d.transaction('pics', mode);
+      const req = fn(tx.objectStore('pics'));
+      tx.oncomplete = () => res(req.result);
+      tx.onerror = tx.onabort = () => rej(tx.error);
+    });
+  };
+  const safe = (p) => p.catch(() => null);
+  return {
+    get: (k) => safe(run('readonly', (s) => s.get(k))),
+    put: (k, v) => safe(run('readwrite', (s) => s.put(v, k))),
+    del: (k) => safe(run('readwrite', (s) => s.delete(k))),
+    clear: () => safe(run('readwrite', (s) => s.clear())),
+  };
+})();
+
+async function prepareImage(file) {               // -> { blob, ext, w, h }: at most 1600px wide, WebP when the phone can
   let src;
   try { src = await createImageBitmap(file); } catch {
     src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('לא הצלחתי לקרוא את התמונה.')); im.src = URL.createObjectURL(file); });
   }
+  if (file.type === 'image/gif') return { blob: file, ext: 'gif', w: src.width, h: src.height };    // keeps the animation
   const scale = Math.min(1, 1600 / src.width);
   const c = document.createElement('canvas');
   c.width = Math.round(src.width * scale);
@@ -1615,16 +1689,105 @@ async function prepareImage(file) {
   let out = await toBlob('image/webp', 0.84);
   let ext = 'webp';
   if (!out || out.type !== 'image/webp') { out = await toBlob('image/jpeg', 0.86); ext = 'jpg'; }
-  return { bytes: new Uint8Array(await out.arrayBuffer()), ext };
+  return { blob: out, ext, w: c.width, h: c.height };
+}
+
+function youtubeOf(link) {                        // the same reading as youtube_id() in tools/embeds.py
+  let u;
+  try { u = new URL(String(link).trim()); } catch { return null; }
+  const host = u.hostname.toLowerCase().replace(/^(www|m|music)\./, '');
+  let id = '';
+  if (host === 'youtu.be') id = u.pathname.split('/')[1] || '';
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    id = u.searchParams.get('v') || (/^\/(?:embed|shorts|v|live)\/([^/?#]+)/.exec(u.pathname) || [])[1] || '';
+  } else return null;
+  id = id.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 11);
+  if (id.length !== 11) return null;
+  const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/.exec(u.searchParams.get('t') || u.searchParams.get('start') || '');
+  const start = m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+  return { id, url: `https://www.youtube.com/watch?v=${id}${start ? `&t=${start}s` : ''}` };
+}
+function embedOf(link) {                           // a link the site shows as a player, or null
+  const yt = youtubeOf(link);
+  if (yt) return { url: yt.url, yt: yt.id };
+  let u;
+  try { u = new URL(String(link).trim()); } catch { return null; }
+  return /^https?:$/.test(u.protocol) && EMBED_HOST.test(u.hostname.replace(/^(www|m)\./, '')) ? { url: u.href, yt: '' } : null;
+}
+const ytThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+// The post's content as the site stores it: text paragraphs, pictures as WordPress-style figures,
+// and a video link alone in its paragraph, which build.py turns into a player.
+function blocksToHtml(blocks, srcOf, title) {
+  return blocks.map((b) => {
+    if (b.type === 'text') return b.text.trim() ? toHtml(b.text) : '';
+    if (b.type === 'video') return `<p>${esc(b.url)}</p>`;
+    const src = srcOf(b);
+    if (b.type !== 'image' || !src) return '';
+    const cap = str(b.caption);
+    return `<figure class="wp-block-image aligncenter size-large"><img loading="lazy" decoding="async" src="${esc(src)}" alt="${esc(cap || title)}"`
+      + `${b.w ? ` width="${b.w}" height="${b.h}"` : ''}/>${cap ? `<figcaption class="wp-element-caption">${esc(cap)}</figcaption>` : ''}</figure>`;
+  }).filter(Boolean).join('\n');
+}
+
+const fileBase = (name) => String(name || '').replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'post';
+const paragraphs = (text) => text.replace(/\r\n?/g, '\n').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+
+function askVideo() {                              // a sheet that asks for a YouTube link; resolves to { url, yt } or null
+  return new Promise((resolve) => {
+    let done = false;
+    let found = null;
+    const finish = (v) => { if (!done) { done = true; resolve(v); close(); } };
+    const preview = el('div', { class: 'video-ask-preview' });
+    const addBtn = el('button', { class: 'btn primary', disabled: true, onclick: () => finish(found) }, icon('plus'), 'הוספה');
+    const input = el('input', { class: 'field', type: 'url', dir: 'ltr', inputmode: 'url', placeholder: 'https://youtu.be/…', 'aria-label': 'קישור לסרטון',
+      enterkeyhint: 'done', oninput: () => check(), onkeydown: (e) => { if (e.key === 'Enter' && found) finish(found); } });
+    function check() {
+      const v = input.value.trim();
+      found = v ? embedOf(v) : null;
+      addBtn.disabled = !found;
+      preview.replaceChildren(!v ? el('p', { class: 'muted', text: 'מעתיקים ביוטיוב את הקישור (שיתוף ← העתקה) ומדביקים כאן.' })
+        : !found ? el('p', { class: 'bad-text', text: 'זה לא נראה כמו קישור לסרטון ביוטיוב.' })
+          : found.yt ? el('div', { class: 'blk-preview' }, el('img', { src: ytThumb(found.yt), alt: '' }), el('span', { class: 'blk-play' }, icon('play')))
+            : el('p', { class: 'muted', text: 'הקישור יוצג באתר כנגן.' }));
+    }
+    const paste = navigator.clipboard && navigator.clipboard.readText
+      ? el('button', { class: 'btn ghost', onclick: async () => {
+        try { input.value = (await navigator.clipboard.readText()).trim(); check(); } catch { input.focus(); toast('לא הצלחתי לקרוא את ההעתקה. אפשר להדביק בלחיצה ארוכה על השדה.', 'bad'); }
+      } }, 'הדבקה')
+      : null;
+    const close = openSheet(el('div', { class: 'confirm video-ask' },
+      el('h3', { text: 'סרטון יוטיוב' }),
+      el('div', { class: 'video-ask-row' }, input, paste),
+      preview,
+      el('div', { class: 'row-actions' }, addBtn, el('button', { class: 'btn ghost', onclick: () => finish(null) }, 'ביטול'))),
+    { onClose: () => { if (!done) { done = true; resolve(null); } } });
+    check();
+    setTimeout(() => input.focus(), 250);
+  });
 }
 
 function openComposer() {
   const saved = store.get('composer', {});
+  let seq = Date.now();
+  const nid = () => `b${(seq++).toString(36)}`;
   const st = {
-    title: saved.title || '', body: saved.body || '', excerpt: saved.excerpt || '', tags: saved.tags || '', slug: saved.slug || '',
-    author: saved.author || store.get('lastAuthor', 'idanb'), cats: saved.cats || [], file: null, preview: '',
+    title: saved.title || '', excerpt: saved.excerpt || '', tags: saved.tags || '', slug: saved.slug || '',
+    author: saved.author || store.get('lastAuthor', 'idanb'), cats: saved.cats || [],
+    blocks: Array.isArray(saved.blocks) && saved.blocks.length ? saved.blocks : [{ id: nid(), type: 'text', text: saved.body || '' }],
+    main: saved.main || null,          // { id, name } of the main picture
+    at: null,                          // where the cursor was last: { id, pos } of a text block
   };
-  const save = () => store.set('composer', { title: st.title, body: st.body, excerpt: st.excerpt, tags: st.tags, slug: st.slug, author: st.author, cats: st.cats });
+  const mem = new Map();               // picture id -> { blob, ext, w, h, url }
+  const save = () => store.set('composer', {
+    title: st.title, excerpt: st.excerpt, tags: st.tags, slug: st.slug, author: st.author, cats: st.cats,
+    blocks: st.blocks.map((b) => (b.type === 'text' ? { id: b.id, type: 'text', text: b.text }
+      : b.type === 'video' ? { id: b.id, type: 'video', url: b.url, yt: b.yt } : { id: b.id, type: 'image', caption: b.caption || '', name: b.name || '' })),
+    main: st.main,
+  });
+  const keep = async (id, pic) => { pic.url = URL.createObjectURL(pic.blob); mem.set(id, pic); await pics.put(id, { blob: pic.blob, ext: pic.ext, w: pic.w, h: pic.h }); };
+  const forget = (id) => { const p = mem.get(id); if (p) URL.revokeObjectURL(p.url); mem.delete(id); pics.del(id); };
+
   const authors = S.authors.filter((a) => a.active !== false).map((a) => ({ value: str(a.slug) || slugify(a.name), label: str(a.name) }));
   if (!authors.some((a) => a.value === st.author) && authors.length) st.author = authors.some((a) => a.value === 'idanb') ? 'idanb' : authors[0].value;
   const cats = S.categories.filter((c) => c.active !== false).map((c) => ({ value: str(c.slug) || slugify(c.name), label: str(c.name), child: !!str(c.parent) }));
@@ -1632,26 +1795,143 @@ function openComposer() {
   const grow = (t) => { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 4}px`; };
   const title = el('textarea', { class: 'field title-field', rows: 1, placeholder: 'כותרת', 'aria-label': 'כותרת', enterkeyhint: 'next', oninput: (e) => { st.title = e.target.value.replace(/\n/g, ' '); if (e.target.value !== st.title) e.target.value = st.title; grow(e.target); save(); } });
   title.value = st.title;
-  const body = el('textarea', { class: 'field body-field', rows: 10, 'aria-label': 'תוכן',
-    placeholder: 'הטקסט של הפוסט. שורה ריקה מתחילה פסקה חדשה. קישור ליוטיוב, לפייסבוק או ל-X בשורה נפרדת יוצג באתר כנגן.',
-    oninput: (e) => { st.body = e.target.value; grow(e.target); save(); } });
-  body.value = st.body;
-  const fileInput = el('input', { type: 'file', accept: 'image/*', hidden: true, onchange: (e) => {
+  const status = el('p', { class: 'compose-status', role: 'status' });
+
+  // ---- the main picture
+  const mainInput = el('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async (e) => {
     const f = e.target.files && e.target.files[0];
+    e.target.value = '';
     if (!f) return;
-    st.file = f;
-    if (st.preview) URL.revokeObjectURL(st.preview);
-    st.preview = URL.createObjectURL(f);
-    paintImage();
+    try {
+      status.textContent = 'מכין את התמונה…';
+      const pic = await prepareImage(f);
+      if (st.main) forget(st.main.id);
+      st.main = { id: `main-${nid()}`, name: f.name };
+      await keep(st.main.id, pic);
+      save();
+      paintMain();
+    } catch (err) { toast(err.message || String(err), 'bad'); } finally { status.textContent = ''; }
   } });
   const imageBox = el('div', { class: 'image-pick' });
-  function paintImage() {
-    imageBox.replaceChildren(st.file
-      ? el('div', { class: 'image-chosen' }, el('img', { src: st.preview, alt: '' }),
-        el('button', { class: 'icon-btn on-image', 'aria-label': 'הסרת התמונה', onclick: () => { st.file = null; fileInput.value = ''; paintImage(); } }, icon('close')))
-      : el('button', { class: 'image-empty', onclick: () => fileInput.click() }, icon('image'), el('span', { text: 'תמונה ראשית' }), el('small', { text: 'מהגלריה או מהמצלמה' })));
+  function paintMain() {
+    const pic = st.main && mem.get(st.main.id);
+    imageBox.replaceChildren(pic
+      ? el('div', { class: 'image-chosen' }, el('img', { src: pic.url, alt: '' }),
+        el('button', { class: 'icon-btn on-image', 'aria-label': 'הסרת התמונה הראשית', onclick: () => { forget(st.main.id); st.main = null; save(); paintMain(); } }, icon('close')))
+      : el('button', { class: 'image-empty', onclick: () => mainInput.click() }, icon('image'), el('span', { text: 'תמונה ראשית' }), el('small', { text: 'מהגלריה או מהמצלמה' })));
   }
-  paintImage();
+
+  // ---- the content: text, pictures and videos in order
+  const blocksBox = el('div', { class: 'blocks' });
+  const textOf = (id) => blocksBox.querySelector(`textarea[data-id="${id}"]`);
+  function normalize() {               // neighbouring texts merge, empty texts go, and the content always ends with text
+    const out = [];
+    for (const b of st.blocks) {
+      const prev = out[out.length - 1];
+      if (b.type === 'text' && prev && prev.type === 'text') prev.text = [prev.text.trim(), b.text.trim()].filter(Boolean).join('\n\n');
+      else out.push(b);
+    }
+    st.blocks = out.filter((b, k) => b.type !== 'text' || b.text.trim() || k === out.length - 1);
+    if (!st.blocks.length || st.blocks[st.blocks.length - 1].type !== 'text') st.blocks.push({ id: nid(), type: 'text', text: '' });
+  }
+  function insertAtCursor(added) {
+    const k = st.at ? st.blocks.findIndex((b) => b.id === st.at.id && b.type === 'text') : -1;
+    const after = { id: nid(), type: 'text', text: '' };
+    if (k >= 0) {
+      const b = st.blocks[k];
+      const pos = st.at.pos == null ? b.text.length : Math.min(st.at.pos, b.text.length);
+      after.text = b.text.slice(pos).replace(/^\s+/, '');
+      st.blocks.splice(k, 1, { ...b, text: b.text.slice(0, pos).replace(/\s+$/, '') }, ...added, after);
+    } else st.blocks.push(...added, after);
+    normalize();
+    const next = st.blocks[st.blocks.indexOf(added[added.length - 1]) + 1];
+    st.at = next ? { id: next.id, pos: 0 } : null;
+    save();
+    paintBlocks();
+    blocksBox.querySelector(`[data-block="${added[0].id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  function move(b, dir) {              // one paragraph (or one picture/video) up or down
+    const k = st.blocks.indexOf(b);
+    const n = st.blocks[k + dir];
+    if (!n) return;
+    if (n.type !== 'text') { st.blocks[k] = n; st.blocks[k + dir] = b; } else {
+      const ps = paragraphs(n.text);
+      const moved = dir < 0 ? ps.pop() : ps.shift();
+      n.text = ps.join('\n\n');
+      st.blocks.splice(k, 1);
+      const at = st.blocks.indexOf(n);
+      const piece = { id: nid(), type: 'text', text: moved || '' };
+      if (dir < 0) st.blocks.splice(at + 1, 0, b, piece); else st.blocks.splice(at, 0, piece, b);
+    }
+    st.at = null;
+    normalize();
+    save();
+    paintBlocks();
+    blocksBox.querySelector(`[data-block="${b.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  function remove(b) {
+    if (b.type === 'image') forget(b.id);
+    st.blocks = st.blocks.filter((x) => x !== b);
+    st.at = null;
+    normalize();
+    save();
+    paintBlocks();
+  }
+  function textBlock(b, k) {
+    const mark = (e) => { st.at = { id: b.id, pos: e.target.selectionStart }; };
+    const t = el('textarea', { class: `field body-field${st.blocks.length === 1 ? ' only' : ''}`, rows: st.blocks.length === 1 ? 8 : 3, 'data-id': b.id, 'data-block': b.id, 'aria-label': 'טקסט',
+      placeholder: k === 0 ? 'הטקסט של הפוסט. שורה ריקה מתחילה פסקה חדשה. כדי לשלב תמונה או סרטון, עומדים במקום הרצוי ולוחצים למטה על "תמונה" או "סרטון".' : 'המשך הטקסט…',
+      oninput: (e) => { b.text = e.target.value; mark(e); grow(e.target); save(); },
+      onblur: mark, onclick: mark, onkeyup: mark, onfocus: mark });
+    t.value = b.text;
+    return t;
+  }
+  function mediaBlock(b, k) {
+    const last = st.blocks.length - 1;
+    const tools = el('div', { class: 'blk-tools' },
+      el('button', { class: 'icon-btn', 'aria-label': 'הזזה למעלה', disabled: k === 0 ? true : null, onclick: () => move(b, -1) }, icon('up')),
+      el('button', { class: 'icon-btn', 'aria-label': 'הזזה למטה', disabled: k >= last - 1 && !str(st.blocks[last].text) ? true : null, onclick: () => move(b, 1) }, icon('down')),
+      el('button', { class: 'icon-btn', 'aria-label': b.type === 'image' ? 'הסרת התמונה' : 'הסרת הסרטון', onclick: () => remove(b) }, icon('trash')));
+    if (b.type === 'video') {
+      return el('div', { class: 'blk-media', 'data-block': b.id },
+        b.yt ? el('div', { class: 'blk-preview' }, el('img', { src: ytThumb(b.yt), alt: '', loading: 'lazy' }), el('span', { class: 'blk-play' }, icon('play'))) : null,
+        el('div', { class: 'blk-row' }, el('span', { class: 'blk-kind' }, icon('video')), el('bdi', { class: 'blk-url', dir: 'ltr', text: b.url.replace(/^https?:\/\/(www\.)?/, '') }), tools));
+    }
+    const pic = mem.get(b.id);
+    const cap = el('input', { class: 'field', placeholder: 'כיתוב לתמונה (לא חובה)', 'aria-label': 'כיתוב לתמונה', value: b.caption || '', oninput: (e) => { b.caption = e.target.value; save(); } });
+    return el('div', { class: 'blk-media', 'data-block': b.id },
+      el('div', { class: 'blk-preview' }, pic ? el('img', { src: pic.url, alt: '' }) : el('div', { class: 'mini-spin-wrap' }, el('i', { class: 'mini-spin' }))),
+      el('div', { class: 'blk-row' }, cap, tools));
+  }
+  function paintBlocks() {
+    blocksBox.replaceChildren(...st.blocks.map((b, k) => (b.type === 'text' ? textBlock(b, k) : mediaBlock(b, k))));
+    blocksBox.querySelectorAll('textarea').forEach(grow);
+  }
+
+  // ---- adding pictures and videos where the cursor is
+  const picsInput = el('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if (!files.length) return;
+    const added = [];
+    try {
+      for (const [n, f] of files.entries()) {
+        status.textContent = files.length > 1 ? `מכין תמונה ${n + 1} מתוך ${files.length}…` : 'מכין את התמונה…';
+        const pic = await prepareImage(f);
+        const b = { id: nid(), type: 'image', caption: '', name: f.name };
+        await keep(b.id, pic);
+        added.push(b);
+      }
+    } catch (err) { toast(err.message || String(err), 'bad'); } finally { status.textContent = ''; }
+    if (added.length) insertAtCursor(added);
+  } });
+  const addPicBtn = el('button', { class: 'btn ghost small', type: 'button', onclick: () => picsInput.click() }, icon('image'), 'תמונה');
+  const addVideoBtn = el('button', { class: 'btn ghost small', type: 'button', onclick: async () => {
+    const v = await askVideo();
+    if (v) insertAtCursor([{ id: nid(), type: 'video', url: v.url, yt: v.yt }]);
+  } }, icon('video'), 'סרטון');
+  for (const btn of [addPicBtn, addVideoBtn]) btn.addEventListener('pointerdown', (e) => e.preventDefault());   // keep the cursor where it is
+
   const authorSel = el('select', { class: 'field', 'aria-label': 'כותב', onchange: (e) => { st.author = e.target.value; save(); } },
     authors.map((a) => el('option', { value: a.value, selected: a.value === st.author ? true : null, text: a.label })));
   const chips = el('div', { class: 'chips' }, cats.map((c) => el('button', {
@@ -1669,30 +1949,32 @@ function openComposer() {
   tags.value = st.tags;
   const slug = el('input', { class: 'field', dir: 'ltr', placeholder: 'dune-part-three-review', oninput: (e) => { st.slug = e.target.value; save(); } });
   slug.value = st.slug;
-  const status = el('p', { class: 'compose-status', role: 'status' });
   const draftBtn = el('button', { class: 'btn ghost', onclick: () => submit(false) }, 'שמירה כטיוטה');
   const pubBtn = el('button', { class: 'btn primary', onclick: () => submit(true) }, icon('send'), 'פרסום');
 
   async function submit(publish) {
     st.title = title.value.trim();
     if (!st.title) { title.focus(); toast('צריך כותרת.', 'bad'); return; }
-    if (publish && !body.value.trim()) { body.focus(); toast('אין עדיין טקסט לפרסם.', 'bad'); return; }
+    if (publish && !st.blocks.some((b) => b.type !== 'text' || b.text.trim())) { textOf(st.blocks[0].id)?.focus(); toast('אין עדיין תוכן לפרסם.', 'bad'); return; }
+    if (st.blocks.some((b) => b.type === 'image' && !mem.has(b.id))) { toast('רגע, התמונות עוד נטענות.', 'bad'); return; }
     if (publish && !(await confirmSheet({ title: 'לפרסם עכשיו?', text: 'הפוסט יעלה לאתר בעוד כ-3 דקות, ומשם גם לניוזלטר.', ok: 'פרסום' }))) return;
-    draftBtn.disabled = pubBtn.disabled = true;
+    draftBtn.disabled = pubBtn.disabled = addPicBtn.disabled = addVideoBtn.disabled = true;
     try {
       const t = israelNow();
       const file = `${t.Y}-${t.M}-${t.D}-${t.h}${t.m}${t.s}.html`;
       const path = publish ? `content/posts/${t.Y}/${file}` : `content/posts/${file}`;
       const changes = [];
-      let image = '';
-      if (st.file) {
-        status.textContent = 'מכין את התמונה…';
-        const img = await prepareImage(st.file);
-        const base = (st.file.name || '').replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'post';
-        const name = `${base}-${t.h}${t.m}${t.s}.${img.ext}`;
-        changes.push({ path: `static/wp-content/uploads/${t.Y}/${t.M}/${name}`, bytes: img.bytes });
-        image = `/wp-content/uploads/${t.Y}/${t.M}/${name}`;
-      }
+      const srcs = new Map();
+      const upload = async (id, name, k) => {
+        const pic = mem.get(id);
+        const fname = `${fileBase(name)}-${t.h}${t.m}${t.s}${k ? `-${k}` : ''}.${pic.ext}`;
+        changes.push({ path: `static/wp-content/uploads/${t.Y}/${t.M}/${fname}`, bytes: new Uint8Array(await pic.blob.arrayBuffer()) });
+        return `/wp-content/uploads/${t.Y}/${t.M}/${fname}`;
+      };
+      status.textContent = 'מכין את התמונות…';
+      const image = st.main && mem.has(st.main.id) ? await upload(st.main.id, st.main.name, 0) : '';
+      let k = 0;
+      for (const b of st.blocks) if (b.type === 'image') srcs.set(b.id, await upload(b.id, b.name, ++k));
       const q = (s) => JSON.stringify(s);
       const tagList = st.tags.split(/[,\n،]/).map((x) => x.trim()).filter(Boolean);
       const fm = [
@@ -1706,12 +1988,15 @@ function openComposer() {
         image ? `image: ${image}` : null,
         st.excerpt.trim() ? `excerpt: ${q(st.excerpt.trim())}` : null,
       ].filter(Boolean).join('\n');
-      const text = `---\n${fm}\n---\n${toHtml(body.value)}\n`;
+      const html = blocksToHtml(st.blocks.map((b) => (b.type === 'image' ? { ...b, w: mem.get(b.id).w, h: mem.get(b.id).h } : b)), (b) => srcs.get(b.id), st.title);
+      const text = `---\n${fm}\n---\n${html}\n`;
       changes.unshift({ path, text });
       status.textContent = 'שומר באתר…';
       await commitFiles(`${publish ? 'פוסט חדש' : 'טיוטה חדשה'}: ${st.title.slice(0, 80)} ${byApp()}`, async () => changes);
       store.del('composer');
       store.set('lastAuthor', st.author);
+      for (const id of [...mem.keys()]) forget(id);
+      pics.clear();
       const post = { ...parsePost(text), path, file, when: parseLocal(`${t.Y}-${t.M}-${t.D} ${t.h}:${t.m}`), pendingPublish: publish };
       post.url = postUrl(post, file);
       S.posts.unshift(post);
@@ -1724,28 +2009,63 @@ function openComposer() {
     } catch (e) {
       status.textContent = '';
       toast(e.message || String(e), 'bad');
-      draftBtn.disabled = pubBtn.disabled = false;
+      draftBtn.disabled = pubBtn.disabled = addPicBtn.disabled = addVideoBtn.disabled = false;
     }
+  }
+
+  async function clearAll() {
+    if (!(await confirmSheet({ title: 'לנקות את מה שנכתב?', text: 'הכותרת, הטקסט, התמונות והסרטונים שבחרת יימחקו מהטלפון. פוסטים שכבר נשמרו באתר לא יושפעו.', ok: 'ניקוי', danger: true }))) return;
+    for (const id of [...mem.keys()]) forget(id);
+    pics.clear();
+    store.del('composer');
+    close();
+    setTimeout(openComposer, 260);
   }
 
   const close = openSheet(el('div', { class: 'composer' },
     el('div', { class: 'composer-bar' },
       el('button', { class: 'icon-btn', 'aria-label': 'סגירה', onclick: () => close() }, icon('close')),
       el('h3', { text: 'פוסט חדש' }),
-      el('span', { class: 'saved-note', text: 'הטקסט נשמר בטלפון בזמן הכתיבה' })),
+      el('span', { class: 'saved-note', text: 'נשמר בטלפון בזמן הכתיבה' }),
+      el('button', { class: 'icon-btn', 'aria-label': 'ניקוי כל מה שנכתב', onclick: clearAll }, icon('trash'))),
     el('div', { class: 'composer-body' },
-      title, imageBox, fileInput,
+      title, imageBox, mainInput, picsInput,
       el('label', { class: 'lbl' }, 'כותב', authorSel),
       el('div', { class: 'lbl' }, 'קטגוריות', chips),
-      body,
+      el('div', { class: 'lbl' }, 'תוכן', blocksBox),
       el('details', { class: 'more-opts' }, el('summary', { text: 'אפשרויות נוספות' }),
         el('label', { class: 'lbl' }, 'תקציר', excerpt),
         el('label', { class: 'lbl' }, 'תגיות', tags),
         el('label', { class: 'lbl' }, 'כתובת קצרה באנגלית (לא חובה)', slug))),
-    el('div', { class: 'composer-foot' }, status, el('div', { class: 'row-actions' }, pubBtn, draftBtn))), {
+    el('div', { class: 'composer-foot' }, status,
+      el('div', { class: 'insert-bar' }, el('span', { text: 'הוספה בתוך הטקסט:' }), addPicBtn, addVideoBtn),
+      el('div', { class: 'row-actions' }, pubBtn, draftBtn))), {
     full: true, onClose: () => { if (location.hash === '#new') history.replaceState(null, '', `#${S.tab}`); },
   });
-  setTimeout(() => { grow(title); grow(body); if (!st.title) title.focus(); }, 250);
+
+  normalize();
+  paintMain();
+  paintBlocks();
+  setTimeout(() => { grow(title); blocksBox.querySelectorAll('textarea').forEach(grow); if (!st.title) title.focus(); }, 250);
+
+  // pictures from an earlier, unfinished post come back from IndexedDB
+  (async () => {
+    const ids = [st.main && st.main.id, ...st.blocks.filter((b) => b.type === 'image').map((b) => b.id)].filter(Boolean);
+    if (!ids.length) return;
+    let lost = 0;
+    for (const id of ids) {
+      const v = await pics.get(id);
+      if (v && v.blob) { mem.set(id, { ...v, url: URL.createObjectURL(v.blob) }); continue; }
+      lost++;
+      if (st.main && st.main.id === id) st.main = null;
+      st.blocks = st.blocks.filter((b) => b.id !== id);
+    }
+    normalize();
+    save();
+    paintMain();
+    paintBlocks();
+    if (lost) toast(lost === 1 ? 'תמונה אחת מהכתיבה הקודמת לא נשמרה בטלפון. צריך לבחור אותה שוב.' : `${lost} תמונות מהכתיבה הקודמת לא נשמרו בטלפון. צריך לבחור אותן שוב.`, 'bad');
+  })();
 }
 
 // ------------------------------------------------------------------ routing and start
