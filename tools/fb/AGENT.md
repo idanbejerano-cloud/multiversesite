@@ -19,8 +19,14 @@ else there.**
    `window.scrollTo` does not load more posts), then run `window.__grab()`.
    Stop early once the list contains a post whose numeric id is `<= after_id`.
 4. Candidates = posts whose `author` equals an author's `facebook_name` or one of its `aliases`,
-   whose id is numerically greater than `after_id`, and which aren't in `facebook_seen.json`.
+   whose id is numerically greater than `after_id`, which aren't in `facebook_seen.json`, and whose
+   `site` list is empty (a post linking to the site is a share of a site post, not new writing).
 5. Remember the largest post id you saw (any author) — it becomes the new `after_id` at the end.
+6. Site posts already in the group: still on the feed, run `python3 tools/fb/site_to_group.py list`.
+   If the list isn't empty, run the contents of `tools/fb/find_shared.js` with javascript_tool, then
+   `window.__findShared(<that list, as JSON>)`. For each match (someone already posted it in the group
+   by hand, from the management app, or with Facebook's share button) run
+   `python3 tools/fb/site_to_group.py mark <id> shared <facebook_url>` — it will not be offered (§4).
 
 ## 2. Each candidate
 1. Open `https://www.facebook.com/groups/ulammale/posts/<id>/` and run `tools/fb/extract_post.js`.
@@ -29,7 +35,9 @@ else there.**
    games or pop culture (reviews, news, opinion pieces, lists, recommendations, trailers with real
    commentary). Skip: off-topic posts, group housekeeping (welcoming new members, rules, polls about
    the group), job ads, a bare share or link with fewer than ~2 sentences of the author's own text,
-   and scheduled posts that aren't published yet ("in 18 hours" etc.).
+   scheduled posts that aren't published yet ("in 18 hours" etc.), and a post that passes on an article
+   that is already on the site (a link to multiversesite.com, or the title of a site post – also posts made
+   by §4); `add_post.py` refuses those by itself too.
    For a skipped post run `python3 tools/add_post.py --skip "<short reason>" <id>`.
 3. Images (up to 6) — downloaded inside the browser, so it works even when this environment can't
    reach Facebook's servers directly. On the same post page run the contents of
@@ -75,7 +83,11 @@ Posts written on the site (in Pages CMS, not imported from Facebook) are offered
    block, and ask in Hebrew: "לפרסם את זה בקבוצה? אפשר לענות כן, לא, או לשלוח תיקונים לנוסח."
    **Do not post anything yet.**
 4. Only when Idan answers in this conversation:
-   - **Approves** ("כן", "פרסם", or approves with corrections): post exactly the approved text (with his
+   - **Approves** ("כן", "פרסם", or approves with corrections): first make sure it isn't in the group
+     already — open the feed (`feed_url`), run `tools/fb/grab.js`, scroll and `window.__grab()` 3 times,
+     then `tools/fb/find_shared.js` and `window.__findShared([<this post's item from the list>])`. If it is
+     found, don't post: mark it `shared` with that address and tell Idan it is already in the group.
+     Otherwise post exactly the approved text (with his
      corrections) in the group — open https://www.facebook.com/groups/ulammale, click the box for a new
      post ("כאן כותבים…" / "Write something…"), type the text, wait a few seconds for the link preview,
      then click "פרסום" / "Post". Add nothing else: no photos, tags, feelings or polls. Check that the post

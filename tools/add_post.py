@@ -88,6 +88,32 @@ def mark(ids, reason):
         json.dump(seen, f, ensure_ascii=False, indent=1, sort_keys=True)
 
 
+def site_share_reason(fb_id, text):
+    """Why this group post is a share of a post that is already on the site, or '' if it isn't.
+    Such posts must not come back to the site as new posts (see tools/fb/site_to_group.py)."""
+    shared = (load(os.path.join(ROOT, 'data', 'facebook_shared.json'), {}) or {}).get('posts') or {}
+    if any(f'/posts/{fb_id}/' in str(v.get('facebook_url') or '') for v in shared.values()):
+        return 'פוסט מהאתר ששותף בקבוצה'
+    if 'multiversesite.com' in text.lower():
+        return 'קישור לכתבה מהאתר'
+    norm = lambda t: re.sub(r'\s+', ' ', re.sub(r'[\u05f3’`]', "'", re.sub(r'[\u05f4“”]', '"', str(t)))).strip()
+    body = norm(text)
+    recent = (dt.date.today() - dt.timedelta(days=120)).isoformat()
+    fm_re = re.compile(r'\A---\r?\n(.*?\r?\n)---\r?\n', re.S)
+    for dp, _, files in os.walk(os.path.join(ROOT, 'content', 'posts')):
+        for fn in files:
+            if not fn.endswith('.html') or fn[:10] < recent[:4]:
+                continue
+            m = fm_re.match(open(os.path.join(dp, fn), encoding='utf-8').read())
+            fm = (yaml.safe_load(m.group(1)) or {}) if m else {}
+            if fm.get('source') == 'facebook' or str(fm.get('date') or '')[:10] < recent:
+                continue
+            title = norm(fm.get('title') or '')
+            if len(title) >= 15 and title in body:
+                return f'שיתוף של הכתבה מהאתר "{title[:60]}"'
+    return ''
+
+
 def main(path):
     with open(path, encoding='utf-8') as f:
         post = json.load(f)
@@ -99,6 +125,13 @@ def main(path):
         return
     if fb_id in seen:
         print('SKIP already added', seen[fb_id])
+        return
+    why = site_share_reason(fb_id, post.get('text') or '')
+    if why:                                  # a group post that only passes on an article from the site
+        seen[fb_id] = f'skipped: {why}'
+        with open(SEEN, 'w', encoding='utf-8') as f:
+            json.dump(seen, f, ensure_ascii=False, indent=1, sort_keys=True)
+        print('SKIP', why)
         return
 
     people = {}
