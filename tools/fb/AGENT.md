@@ -90,7 +90,8 @@ for "אולם ומלואו" and for the other groups listed in `data/facebook.js
    **Do not post anything yet.**
 4. Only when Idan answers in this conversation:
    - **"כן"** (or "פרסם", "כן לכולן", or corrections alone) = every group in the list you showed for this
-     post (the comics group only if you offered it). **"רק אולם ומלואו"** = group 1 only. **Numbers or
+     post (the comics group only if you offered it), except groups marked "לא כלולה ב'כן'" (`ask_only`):
+     those only when he names them or their number. **"רק אולם ומלואו"** = group 1 only. **Numbers or
      names** = exactly those groups. Anything unclear → ask him, post nothing.
    - **Before posting in אולם ומלואו** make sure it isn't there already: open its feed (`feed_url`), run
      `tools/fb/grab.js`, scroll and `window.__grab()` 3 times, then `tools/fb/find_shared.js` and

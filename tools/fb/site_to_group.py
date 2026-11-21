@@ -103,7 +103,8 @@ def main():
     if sys.argv[1] == 'groups':
         for i, g in enumerate(groups(), 1):
             print(f"{i}. {g['name']}" + (f" – {g['note']}" if g.get('note') else '')
-                  + (' (רק לכתבות קומיקס)' if g.get('only_comics') else '') + f"  [{g['key']}] {g['url']}")
+                  + (' (רק לכתבות קומיקס)' if g.get('only_comics') else '')
+                  + (" (לא כלולה ב'כן' – רק אם תבחר במספר שלה)" if g.get('ask_only') else '') + f"  [{g['key']}] {g['url']}")
         return
     args = sys.argv[2:]
     group = None
