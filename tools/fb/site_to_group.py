@@ -4,8 +4,10 @@
   python3 tools/fb/site_to_group.py list
       JSON list of posts waiting to be offered: published, not from Facebook, dated on or after `since`,
       and not yet in data/facebook_shared.json. Each item has the ready-made group post text.
-  python3 tools/fb/site_to_group.py mark <post id> asked|shared|declined [facebook post url]
-      Records what happened to a post, so it is offered only once.
+  python3 tools/fb/site_to_group.py mark <post id> asked|shared|pending|declined [facebook post url] [--group <key>]
+      Records what happened to a post (in one group with --group), so it is offered only once.
+  python3 tools/fb/site_to_group.py groups
+      The numbered list of groups to offer (data/facebook.json `share_groups`), with a note on each.
 
 The text is made from the post itself (title, its opening, writer, link); nothing is invented.
 Posting in the group happens only after Idan approves that exact text in the conversation (AGENT.md §4).
@@ -71,22 +73,51 @@ def candidates():
     return out
 
 
+def groups():
+    cfg = json.load(open(os.path.join(ROOT, 'data', 'facebook.json'), encoding='utf-8'))
+    return cfg.get('share_groups') or [{'key': 'ulammale', 'name': 'אולם ומלואו', 'url': cfg.get('group_url'), 'note': ''}]
+
+
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ('list', 'mark'):
+    if len(sys.argv) < 2 or sys.argv[1] not in ('list', 'mark', 'groups'):
         sys.exit(__doc__)
     if sys.argv[1] == 'list':
         print(json.dumps(candidates(), ensure_ascii=False, indent=1))
         return
-    if len(sys.argv) < 4 or sys.argv[3] not in ('asked', 'shared', 'declined'):
-        sys.exit('usage: mark <post id> asked|shared|declined [facebook post url]')
+    if sys.argv[1] == 'groups':
+        for i, g in enumerate(groups(), 1):
+            print(f"{i}. {g['name']}" + (f" – {g['note']}" if g.get('note') else '') + f"  [{g['key']}] {g['url']}")
+        return
+    args = sys.argv[2:]
+    group = None
+    if '--group' in args:
+        i = args.index('--group')
+        group = args[i + 1] if i + 1 < len(args) else None
+        args = args[:i] + args[i + 2:]
+        if group not in {g['key'] for g in groups()}:
+            sys.exit(f'unknown group key: {group}')
+    if len(args) < 2 or args[1] not in ('asked', 'shared', 'pending', 'declined'):
+        sys.exit('usage: mark <post id> asked|shared|pending|declined [facebook post url] [--group <key>]')
+    pid, status = args[0], args[1]
     state = load_state()
-    entry = state.setdefault('posts', {}).setdefault(sys.argv[2], {})
-    entry['status'] = sys.argv[3]
-    entry['date'] = dt.datetime.now().strftime('%Y-%m-%d %H:%M')
-    if len(sys.argv) > 4:
-        entry['facebook_url'] = sys.argv[4]
+    entry = state.setdefault('posts', {}).setdefault(pid, {})
+    now = dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+    if group:
+        g = entry.setdefault('groups', {}).setdefault(group, {})
+        g.update({'status': status, 'date': now})
+        if len(args) > 2:
+            g['facebook_url'] = args[2]
+        if status in ('shared', 'pending') or entry.get('status') in (None, 'asked'):
+            entry['status'] = 'shared' if status in ('shared', 'pending') else status
+        if group == 'ulammale' and len(args) > 2:
+            entry['facebook_url'] = args[2]      # the home group's post: used to recognise it later
+    else:
+        entry['status'] = status
+        if len(args) > 2:
+            entry['facebook_url'] = args[2]
+    entry['date'] = now
     save_state(state)
-    print(f'{sys.argv[2]}: {sys.argv[3]}')
+    print(f'{pid}: {status}' + (f' in {group}' if group else ''))
 
 
 if __name__ == '__main__':

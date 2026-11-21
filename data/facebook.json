@@ -28,5 +28,85 @@
  "link_back": true,
  "group_id": "2036529056615413",
  "feed_url": "https://www.facebook.com/groups/ulammale/?sorting_setting=CHRONOLOGICAL",
- "after_id": "4562890383979255"
+ "after_id": "4562890383979255",
+ "share_groups": [
+  {
+   "key": "ulammale",
+   "name": "אולם ומלואו",
+   "url": "https://www.facebook.com/groups/ulammale",
+   "note": "הקבוצה שלך"
+  },
+  {
+   "key": "wealllovecinema",
+   "name": "מדברים קולנוע",
+   "url": "https://www.facebook.com/groups/wealllovecinema",
+   "note": "73 אלף חברים; מבקשים להוסיף תוכן ולא רק קישור, ואסור לקדם קבוצות אחרות"
+  },
+  {
+   "key": "881870945262655",
+   "name": "חיים בסרט - ממליצים",
+   "url": "https://www.facebook.com/groups/881870945262655",
+   "note": "43 אלף; 'פרסומות' מביאות להסרה מהקבוצה"
+  },
+  {
+   "key": "moviefansinisrael",
+   "name": "חיים בסרט - הקבוצה לחובבי סרטים וקולנוע",
+   "url": "https://www.facebook.com/groups/moviefansinisrael",
+   "note": "15 אלף; שיתוף של אותו פוסט בהרבה קבוצות מסומן כספאם ומוסר, ואין לפרסם הרבה מאותו מקור"
+  },
+  {
+   "key": "havotveharavot",
+   "name": "אבות וחרבות",
+   "url": "https://www.facebook.com/groups/havotveharavot",
+   "note": "9.5 אלף, הורים גיימרים; פרסום עסקי רק באישור המנהלים"
+  },
+  {
+   "key": "203111433363590",
+   "name": "הגיקיה - בלי כל השיט",
+   "url": "https://www.facebook.com/groups/203111433363590",
+   "note": "8.9 אלף"
+  },
+  {
+   "key": "687651691348137",
+   "name": "סדרות, סרטים ומה שביניהם",
+   "url": "https://www.facebook.com/groups/687651691348137",
+   "note": "5.7 אלף"
+  },
+  {
+   "key": "FilmCollectors",
+   "name": "מהדורה מוגבלת - אספני סרטים ודמויות",
+   "url": "https://www.facebook.com/groups/FilmCollectors",
+   "note": "4.2 אלף, אספנים"
+  },
+  {
+   "key": "1769202870038034",
+   "name": "תשאל גיק - המדריך להורים",
+   "url": "https://www.facebook.com/groups/1769202870038034",
+   "note": "3.5 אלף, הורים; כמעט בלי פעילות"
+  },
+  {
+   "key": "1424253567862263",
+   "name": "אספני ישראל",
+   "url": "https://www.facebook.com/groups/1424253567862263",
+   "note": "1.2 אלף, אספני בלו-ריי, פסלים ואקשן פיגר"
+  },
+  {
+   "key": "854095417992523",
+   "name": "תל הגיק - הגיקים של תל אביב",
+   "url": "https://www.facebook.com/groups/854095417992523",
+   "note": "500 חברים"
+  },
+  {
+   "key": "481081335402474",
+   "name": "המסרטה - חנות הסרטים שלכם!",
+   "url": "https://www.facebook.com/groups/481081335402474",
+   "note": "320 חברים, קבוצה של חנות; כמעט בלי פעילות"
+  },
+  {
+   "key": "446535168874143",
+   "name": "Geeky For kids",
+   "url": "https://www.facebook.com/groups/446535168874143",
+   "note": "170 חברים; בלי פעילות"
+  }
+ ]
 }
