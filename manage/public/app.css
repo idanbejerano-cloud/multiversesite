@@ -449,3 +449,23 @@ bdi.bd-label { white-space: nowrap; text-align: start; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- share sheet */
+.share-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; padding: 4px 0 2px; }
+.share-target {
+  display: grid; justify-items: center; gap: 6px; padding: 4px 0; background: none; border: 0; color: var(--paper);
+  font: 600 13px/1.2 var(--body); text-decoration: none; cursor: pointer; touch-action: manipulation;
+}
+.share-target:active { transform: translateY(1px); }
+.share-badge {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%;
+  font: 800 25px/1 var(--body); box-shadow: 0 0 0 2px #0006;
+}
+.share-badge .ic { width: 25px; height: 25px; }
+.share-badge .ic svg { stroke-width: 2.1; }
+.share-note { margin: 0; font-size: 13px; }
+.sb-fb { background: #1877f2; color: #fff; }
+.sb-wa { background: #25d366; color: #fff; }
+.sb-tg { background: #229ed9; color: #fff; }
+.sb-x { background: #000; color: #fff; }
+.sb-plain { background: var(--panel-2); color: var(--paper); }

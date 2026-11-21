@@ -101,6 +101,9 @@ const ICONS = {
   video: '<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
   play: '<path d="M8 5.5v13L19 12z" fill="currentColor"/>',
   link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
+  chat: '<path d="M12 3.5a8.5 8.5 0 0 0-7.4 12.7L3.5 20.5l4.4-1.1A8.5 8.5 0 1 0 12 3.5z"/>',
+  group: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.8 14.2c2.3.1 4 1.7 4.7 4.8"/>',
 };
 const icon = (name, cls = '') => el('span', { class: `ic ${cls}`, 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[name] || ''}</svg>` });
 
@@ -739,13 +742,58 @@ async function refreshTopPosts() {
   setTimeout(() => { refreshRuns(); watchRuns(); }, 3000);
 }
 
-async function sharePost(post) {
+// the text offered for the Facebook group: the same shape the Facebook agent uses (tools/fb/site_to_group.py)
+function groupText(post) {
+  // the post's opening: the excerpt, or the start of the text (the app keeps only its first 200 characters)
+  const clipped = !str(post.excerpt) && str(post.preview).length >= 195;
+  const opening = (txt) => {
+    const t = str(txt).replace(/\s+/g, ' ').trim();
+    if (t.length <= 280 && !clipped) return t;
+    const cut = t.slice(0, 280);
+    const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '), clipped && /[.!?]$/.test(cut) ? cut.length - 1 : -1);
+    return end > 80 ? cut.slice(0, end + 1) : cut.replace(/\s+\S*$/, '') + '…';
+  };
+  const author = post.path ? authorName(post.author, post.authorName) : '';
+  return [post.title, '', opening(post.excerpt || post.preview), '', author ? `מאת ${author}` : null,
+    `לכתבה המלאה באתר מולטיוורס: ${siteUrl(post.url)}`].filter((x) => x !== null).join('\n');
+}
+
+async function copyText(text, done) {
+  try { await navigator.clipboard.writeText(text); toast(done); }
+  catch { prompt('להעתקה:', text); }
+}
+
+function sharePost(post) {
   const url = siteUrl(post.url);
-  if (navigator.share) {
-    try { await navigator.share({ title: post.title, url }); } catch { /* cancelled */ }
-    return;
-  }
-  try { await navigator.clipboard.writeText(url); toast('הקישור הועתק.'); } catch { prompt('הקישור לפוסט:', url); }
+  const title = post.title || '';
+  const enc = encodeURIComponent;
+  let close;
+  // badges are plain letters or the app's own icons in the network's colour, not the networks' logos
+  // (colours come from classes: the app's CSP allows no inline styles)
+  const badge = (txt, kind) => el('span', { class: `share-badge sb-${kind}`, 'aria-hidden': 'true' }, txt);
+  const iconBadge = (name, kind) => el('span', { class: `share-badge sb-${kind}`, 'aria-hidden': 'true' }, icon(name));
+  const target = (label, mark, href, extra = {}) => el('a', { class: 'share-target', href, target: '_blank', rel: 'noopener', ...extra,
+    onclick: (e) => { if (extra.onclick) extra.onclick(e); setTimeout(() => close && close(), 300); } }, mark, el('span', { text: label }));
+  const button = (label, mark, onclick) => el('button', { class: 'share-target', onclick }, mark, el('span', { text: label }));
+  const targets = [
+    target('פייסבוק', badge('f', 'fb'), `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`),
+    target('לקבוצה', iconBadge('group', 'fb'), FB_GROUP, {
+      onclick: () => { navigator.clipboard?.writeText(groupText(post)).then(() => toast('הנוסח לקבוצה הועתק – מדביקים בפוסט חדש בקבוצה.'), () => {}); },
+    }),
+    target('וואטסאפ', iconBadge('chat', 'wa'), `https://wa.me/?text=${enc(`${title}\n${url}`)}`),
+    target('טלגרם', iconBadge('send', 'tg'), `https://t.me/share/url?url=${enc(url)}&text=${enc(title)}`),
+    target('X', badge('X', 'x'), `https://twitter.com/intent/tweet?text=${enc(title)}&url=${enc(url)}`),
+    target('מייל', iconBadge('mail', 'plain'), `mailto:?subject=${enc(title)}&body=${enc(`${title}\n\n${url}`)}`),
+    button('העתקת קישור', iconBadge('link', 'plain'), () => { copyText(url, 'הקישור הועתק.'); close(); }),
+    navigator.share ? button('עוד…', iconBadge('share', 'plain'), async () => {
+      close();
+      try { await navigator.share({ title, url }); } catch { /* cancelled */ }
+    }) : null,
+  ];
+  close = openSheet(el('div', { class: 'sheet-body' },
+    el('div', { class: 'sheet-head' }, el('h3', { text: 'שיתוף' }), el('p', { class: 'muted clamp2', text: title })),
+    el('div', { class: 'share-grid' }, targets),
+    el('p', { class: 'muted share-note', text: '"לקבוצה" מעתיק נוסח מוכן (כותרת, פתיחה, כותב וקישור) ופותח את אולם ומלואו – מדביקים בפוסט חדש.' })));
 }
 
 // ------------------------------------------------------------------ UI: layer (sheets, confirm) and toast
