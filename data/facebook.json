@@ -107,6 +107,13 @@
    "name": "Geeky For kids",
    "url": "https://www.facebook.com/groups/446535168874143",
    "note": "170 חברים; בלי פעילות"
+  },
+  {
+   "key": "ComicFansIsrael",
+   "name": "המקומיקס - קהילת חובבי קומיקס",
+   "url": "https://www.facebook.com/groups/ComicFansIsrael",
+   "note": "4.8 אלף; רק לכתבות על קומיקס, כולל סרטים וסדרות לפי קומיקס – פוסט שלא קשור לקומיקס נמחק; לסמן ספוילרים",
+   "only_comics": true
   }
  ]
 }

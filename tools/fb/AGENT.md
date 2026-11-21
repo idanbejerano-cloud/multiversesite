@@ -82,13 +82,16 @@ for "אולם ומלואו" and for the other groups listed in `data/facebook.js
    again) and include the change in the commit of §3.
 3. At the end of the report, for each post: its title and address, then the exact `text` in a quote
    block. Then the numbered group list (names and notes, as `groups` prints them, without the keys and
-   addresses), and ask in Hebrew:
-   "לאן לפרסם? 'כן' = רק באולם ומלואו, 'כן לכולן' = בכל הקבוצות, או מספרים (למשל 1, 2, 6). אפשר גם 'לא',
-   או לשלוח תיקונים לנוסח."
+   addresses). A group marked "רק לכתבות קומיקס" belongs to this post's list only when the post is about
+   comics or about a film or series based on comics (`comics: true` in the list is a hint; check the post
+   itself). Ask in Hebrew:
+   "לפרסם? 'כן' = בכל הקבוצות שברשימה, 'רק אולם ומלואו', או מספרים (למשל 1, 2, 6). אפשר גם 'לא', או לשלוח
+   תיקונים לנוסח."
    **Do not post anything yet.**
 4. Only when Idan answers in this conversation:
-   - **"כן"** (or "פרסם", or corrections alone) = only group 1, אולם ומלואו. **"כן לכולן"** = every group in
-     the list. **Numbers or names** = exactly those groups. Anything unclear → ask him, post nothing.
+   - **"כן"** (or "פרסם", "כן לכולן", or corrections alone) = every group in the list you showed for this
+     post (the comics group only if you offered it). **"רק אולם ומלואו"** = group 1 only. **Numbers or
+     names** = exactly those groups. Anything unclear → ask him, post nothing.
    - **Before posting in אולם ומלואו** make sure it isn't there already: open its feed (`feed_url`), run
      `tools/fb/grab.js`, scroll and `window.__grab()` 3 times, then `tools/fb/find_shared.js` and
      `window.__findShared([<this post's item from the list>])`. If found: don't post there; mark it

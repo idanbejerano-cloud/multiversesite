@@ -49,6 +49,22 @@ def opening(text):
     return (cut[:end + 1] if end > 120 else cut.rsplit(' ', 1)[0] + '…').strip()
 
 
+COMICS_CATS = {'קומיקס', 'חדשות-קומיקס', 'ביקורות-קומיקס'}
+COMICS_WORDS = re.compile(
+    r"קומיקס|מנגה|רומן גרפי|מארוול|marvel|\bDC\b|דיסי|גיבור(?:י|ת)? ה?על|סופרמן|superman|באטמן|batman|ספיידר.?מן|"
+    r"spider.?man|וונדר וומן|הנוקמים|avengers|אקס.?מן|x-men|ג'סטיס ליג|בלאק פנתר|דדפול|deadpool|ג'וקר|joker|ונום|"
+    r"ת'ור|איירון.?מן|קפטן אמריקה|אקוומן|גרין לנטרן|הארלי קווין|הבנים|the boys|ג'יימס גאן|james gunn", re.I)
+
+
+def is_comics(p, body):
+    """A hint for the comics group: a comics category, or comics (incl. films and series based on comics) in
+    the title, tags or opening. The agent still looks at the post itself before offering that group."""
+    if COMICS_CATS & set(p.get('categories') or []):
+        return True
+    text = ' '.join([str(p.get('title') or ''), ' '.join(map(str, p.get('tags') or [])), body[:600]])
+    return bool(COMICS_WORDS.search(text))
+
+
 def candidates():
     import build  # the site's own loader: same urls, writers and drafts handling as the site
     state = load_state()
@@ -68,7 +84,7 @@ def candidates():
             lines.append(f'מאת {author}')
         lines.append(f'לכתבה המלאה באתר מולטיוורס: {url}')
         out.append({'id': p['id'], 'title': p['title'], 'url': url, 'date': p['dt'].strftime('%Y-%m-%d %H:%M'),
-                    'author': author, 'text': '\n'.join(lines)})
+                    'author': author, 'comics': is_comics(p, body), 'text': '\n'.join(lines)})
     out.sort(key=lambda x: x['date'])
     return out
 
@@ -86,7 +102,8 @@ def main():
         return
     if sys.argv[1] == 'groups':
         for i, g in enumerate(groups(), 1):
-            print(f"{i}. {g['name']}" + (f" – {g['note']}" if g.get('note') else '') + f"  [{g['key']}] {g['url']}")
+            print(f"{i}. {g['name']}" + (f" – {g['note']}" if g.get('note') else '')
+                  + (' (רק לכתבות קומיקס)' if g.get('only_comics') else '') + f"  [{g['key']}] {g['url']}")
         return
     args = sys.argv[2:]
     group = None
