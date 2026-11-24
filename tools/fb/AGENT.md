@@ -80,15 +80,25 @@ for "אולם ומלואו" and for the other groups listed in `data/facebook.js
    Empty list = nothing to offer. `python3 tools/fb/site_to_group.py groups` prints the numbered groups.
 2. For each post run `python3 tools/fb/site_to_group.py mark <id> asked` (so later runs don't offer it
    again) and include the change in the commit of §3.
-3. At the end of the report, for each post: its title and address, then the exact `text` in a quote
-   block. Then the numbered group list (names and notes, as `groups` prints them, without the keys and
+3. **Opening line (Idan asked for one, at most two lines).** For each post write one short sentence in
+   Hebrew that makes people want to read it — at most 100 characters, about two lines on a phone. Use only
+   facts that are in the post itself; no emojis, hashtags, exclamation chains or invented details, and
+   don't just repeat the title. Then run
+   `python3 tools/fb/site_to_group.py intro <id> "<the sentence>"`: it prints the full group post (your
+   sentence, an empty line, then `text`). If it says the sentence is too long, shorten it and run it
+   again. That printed text is the proposed text.
+4. At the end of the report, for each post: its title and address, then the exact proposed text (from
+   step 3) in a quote block. Then the numbered group list (names and notes, as `groups` prints them, without the keys and
    addresses). A group marked "רק לכתבות קומיקס" belongs to this post's list only when the post is about
    comics or about a film or series based on comics (`comics: true` in the list is a hint; check the post
    itself). Ask in Hebrew:
    "לפרסם? 'כן' = בכל הקבוצות שברשימה, 'רק אולם ומלואו', או מספרים (למשל 1, 2, 6). אפשר גם 'לא', או לשלוח
    תיקונים לנוסח."
    **Do not post anything yet.**
-4. Only when Idan answers in this conversation:
+5. Only when Idan answers in this conversation:
+   - **Corrections**: if he rewrites the opening line, use his words exactly as he wrote them (the length
+     limit is for sentences you write); if he asks you to change it, write a new one, run `intro` again and
+     show him the new text before posting. If he asks for no opening, post `text` alone.
    - **"כן"** (or "פרסם", "כן לכולן", or corrections alone) = every group in the list you showed for this
      post (the comics group only if you offered it), except groups marked "לא כלולה ב'כן'" (`ask_only`):
      those only when he names them or their number. **"רק אולם ומלואו"** = group 1 only. **Numbers or

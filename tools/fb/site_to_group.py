@@ -8,6 +8,9 @@
       Records what happened to a post (in one group with --group), so it is offered only once.
   python3 tools/fb/site_to_group.py groups
       The numbered list of groups to offer (data/facebook.json `share_groups`), with a note on each.
+  python3 tools/fb/site_to_group.py intro <post id> "<opening line>"
+      Prints the group post with a short opening line on top. Idan asked for openings of at most two lines,
+      so it refuses one longer than INTRO_MAX characters or with a line break.
 
 The text is made from the post itself (title, its opening, writer, link); nothing is invented.
 Posting in the group happens only after Idan approves that exact text in the conversation (AGENT.md §4).
@@ -24,6 +27,7 @@ sys.path.insert(0, ROOT)
 STATE = os.path.join(ROOT, 'data', 'facebook_shared.json')
 SITE = 'https://multiversesite.com'
 EXCERPT_CHARS = 280
+INTRO_MAX = 100   # an opening of at most two lines on a phone (Idan, 2026-11-24)
 
 
 def load_state():
@@ -65,6 +69,20 @@ def is_comics(p, body):
     return bool(COMICS_WORDS.search(text))
 
 
+def item(p):
+    """The offer for one site post, with the ready-made group text (title, opening, writer, link)."""
+    import build
+    author = p.get('author_name') or build.AUTHORS.get(p.get('author') or '', '')
+    body = p.get('excerpt') or build.strip_tags(p['teaser'] or p['rest'])
+    url = SITE + quote(p['url'])
+    lines = [p['title'], '', opening(body), '']
+    if author:
+        lines.append(f'מאת {author}')
+    lines.append(f'לכתבה המלאה באתר מולטיוורס: {url}')
+    return {'id': p['id'], 'title': p['title'], 'url': url, 'date': p['dt'].strftime('%Y-%m-%d %H:%M'),
+            'author': author, 'comics': is_comics(p, body), 'text': '\n'.join(lines)}
+
+
 def candidates():
     import build  # the site's own loader: same urls, writers and drafts handling as the site
     state = load_state()
@@ -76,17 +94,25 @@ def candidates():
             continue
         if p['dt'].date().isoformat() < since or str(p['id']) in done:
             continue
-        author = p.get('author_name') or build.AUTHORS.get(p.get('author') or '', '')
-        body = p.get('excerpt') or build.strip_tags(p['teaser'] or p['rest'])
-        url = SITE + quote(p['url'])
-        lines = [p['title'], '', opening(body), '']
-        if author:
-            lines.append(f'מאת {author}')
-        lines.append(f'לכתבה המלאה באתר מולטיוורס: {url}')
-        out.append({'id': p['id'], 'title': p['title'], 'url': url, 'date': p['dt'].strftime('%Y-%m-%d %H:%M'),
-                    'author': author, 'comics': is_comics(p, body), 'text': '\n'.join(lines)})
+        out.append(item(p))
     out.sort(key=lambda x: x['date'])
     return out
+
+
+def with_intro(pid, line):
+    """The group text of site post <pid> with <line> on top, or exit with the reason it can't be used."""
+    import build
+    if '\n' in line or '\r' in line:
+        sys.exit('the opening must be one line, without line breaks')
+    line = re.sub(r'\s+', ' ', line).strip()
+    if not line:
+        sys.exit('the opening is empty')
+    if len(line) > INTRO_MAX:
+        sys.exit(f'the opening has {len(line)} characters; at most {INTRO_MAX} (two lines). Shorten it.')
+    post = next((p for p in build.load_items('posts') if str(p['id']) == str(pid)), None)
+    if post is None:
+        sys.exit(f'no published site post with id {pid}')
+    return line + '\n\n' + item(post)['text']
 
 
 def groups():
@@ -95,8 +121,13 @@ def groups():
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ('list', 'mark', 'groups'):
+    if len(sys.argv) < 2 or sys.argv[1] not in ('list', 'mark', 'groups', 'intro'):
         sys.exit(__doc__)
+    if sys.argv[1] == 'intro':
+        if len(sys.argv) != 4:
+            sys.exit('usage: intro <post id> "<opening line>"')
+        print(with_intro(sys.argv[2], sys.argv[3]))
+        return
     if sys.argv[1] == 'list':
         print(json.dumps(candidates(), ensure_ascii=False, indent=1))
         return
