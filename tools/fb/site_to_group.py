@@ -9,8 +9,8 @@
   python3 tools/fb/site_to_group.py groups
       The numbered list of groups to offer (data/facebook.json `share_groups`), with a note on each.
   python3 tools/fb/site_to_group.py intro <post id> "<opening line>"
-      Prints the group post with a short opening line on top. Idan asked for openings of at most two lines,
-      so it refuses one longer than INTRO_MAX characters or with a line break.
+      Prints the group post with an opening line on top (one line, no line breaks). Idan decides on the
+      opening when he approves the text.
 
 The text is made from the post itself (title, its opening, writer, link); nothing is invented.
 Posting in the group happens only after Idan approves that exact text in the conversation (AGENT.md §4).
@@ -27,7 +27,6 @@ sys.path.insert(0, ROOT)
 STATE = os.path.join(ROOT, 'data', 'facebook_shared.json')
 SITE = 'https://multiversesite.com'
 EXCERPT_CHARS = 280
-INTRO_MAX = 100   # an opening of at most two lines on a phone (Idan, 2026-11-24)
 
 
 def load_state():
@@ -107,8 +106,6 @@ def with_intro(pid, line):
     line = re.sub(r'\s+', ' ', line).strip()
     if not line:
         sys.exit('the opening is empty')
-    if len(line) > INTRO_MAX:
-        sys.exit(f'the opening has {len(line)} characters; at most {INTRO_MAX} (two lines). Shorten it.')
     post = next((p for p in build.load_items('posts') if str(p['id']) == str(pid)), None)
     if post is None:
         sys.exit(f'no published site post with id {pid}')
